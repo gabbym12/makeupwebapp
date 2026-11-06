@@ -9,11 +9,11 @@ const PRODUCTS = [
   { id: 'blush-pop',       name: 'Blush Pop Palette',      brand: 'LuxeLab',  category: 'Face',  price: 26, emoji: '🌸', blurb: 'Silky pressed blush in four buildable shades.' },
   { id: 'lash-drama',      name: 'Lash Drama Mascara',     brand: 'PixelGlow', category: 'Eyes', price: 19, emoji: '👁️', blurb: 'Volume-boosting smudge-proof mascara.' },
   { id: 'shadow-story',    name: 'Shadow Story Palette',  brand: 'GlamCo',    category: 'Eyes',  price: 42, emoji: '🎨', blurb: '12 avant-garde editorial shades curated by runway artists.' },
-  { id: 'liner-sharp',    name: 'Sharp Line Eyeliner',    brand: 'LuxeLab',  category: 'Eyes',  price: 15, emoji: '🖊️', blurb: 'Precision felt-tip liner in ultra-pigmented black.' },
-  { id: 'glow-serum',      name: 'Glow Serum Primer',      brand: 'VanceLab',  category: 'Skin',  price: 38, emoji: '🧖', blurb: 'Skin prep serum with pigment-stabilizing formula.' },
-  { id: ' setting-spray',  name: 'Sweat-Proof Setting Spray', brand: 'StageFX', category: 'Skin', price: 24, emoji: '💦', blurb: 'Polymer setting spray tested under stage lights.' },
-  { id: 'brush-set',       name: 'Pro Brush Set (8 pc)',   brand: 'GlamCo',   category: 'Tools',  price: 55, emoji: '🖌️', blurb: 'Vegan synthetic brushes for flawless blending.' },
-  { id: 'sfx-kit',         name: 'SFX Starter Kit',        brand: 'ChenFX',   category: 'Tools',  price: 78, emoji: '🎭', blurb: 'Silicone appliance kit with edge-blending solvents.' },
+  { id: 'liner-sharp',     name: 'Sharp Line Eyeliner',   brand: 'LuxeLab',  category: 'Eyes',  price: 15, emoji: '🖊️', blurb: 'Precision felt-tip liner in ultra-pigmented black.' },
+  { id: 'glow-serum',      name: 'Glow Serum Primer',     brand: 'VanceLab',  category: 'Skin',  price: 38, emoji: '🧖', blurb: 'Skin prep serum with pigment-stabilizing formula.' },
+  { id: 'setting-spray',   name: 'Sweat-Proof Setting Spray', brand: 'StageFX', category: 'Skin', price: 24, emoji: '💦', blurb: 'Polymer setting spray tested under stage lights.' },
+  { id: 'brush-set',       name: 'Pro Brush Set (8 pc)',  brand: 'GlamCo',    category: 'Tools', price: 55, emoji: '🖌️', blurb: 'Vegan synthetic brushes for flawless blending.' },
+  { id: 'sfx-kit',         name: 'SFX Starter Kit',        brand: 'ChenFX',   category: 'Tools', price: 78, emoji: '🎭', blurb: 'Silicone appliance kit with edge-blending solvents.' },
 ];
 
 // Shared user preferences (favorites, ratings) - used by later phases
