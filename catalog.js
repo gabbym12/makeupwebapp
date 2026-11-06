@@ -1,5 +1,5 @@
-// Glam Empire - Product catalog database (Phase 0)
-// Phase 1 will add search + category filters on top of this data.
+// Glam Empire - Product catalog
+// Feature 3: Search Bar - filter products by keyword across name, brand, category, and description.
 
 const PRODUCTS = [
   { id: 'velvet-matte',    name: 'Velvet Matte Lipstick',  brand: 'GlamCo',    category: 'Lips',  price: 22, emoji: '💄', blurb: 'Long-wear matte lipstick with botanical emulsifiers.' },
@@ -16,14 +16,14 @@ const PRODUCTS = [
   { id: 'sfx-kit',         name: 'SFX Starter Kit',        brand: 'ChenFX',   category: 'Tools', price: 78, emoji: '🎭', blurb: 'Silicone appliance kit with edge-blending solvents.' },
 ];
 
-// Shared user preferences (favorites, ratings) - used by later phases
+// Shared user preferences (favorites, ratings) - used by later features
 function getPrefs() {
   try { return JSON.parse(localStorage.getItem('glamPrefs')) || { favorites: [], ratings: {} }; }
   catch (e) { return { favorites: [], ratings: {} }; }
 }
 function savePrefs(p) { localStorage.setItem('glamPrefs', JSON.stringify(p)); }
 
-// Phase 0: render every product. Phases 1+ will filter/sort this list.
+// Render a list of products into the grid
 function renderCatalog(list) {
   const grid = document.getElementById('pgrid');
   grid.innerHTML = '';
@@ -37,6 +37,30 @@ function renderCatalog(list) {
       + '<div class="price">$' + p.price + '</div>'
       + '<p class="sub" style="font-size:12px;margin-top:6px">' + p.blurb + '</p>';
     grid.appendChild(d);
+  }
+}
+
+// ===== Feature 3: Search Bar =====
+// Live search: matches the query against name, brand, category, and blurb.
+function onSearch() {
+  const q = document.getElementById('searchBar').value.trim().toLowerCase();
+  let results;
+  if (q === '') {
+    results = PRODUCTS;
+  } else {
+    results = PRODUCTS.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      p.brand.toLowerCase().includes(q) ||
+      p.category.toLowerCase().includes(q) ||
+      p.blurb.toLowerCase().includes(q)
+    );
+  }
+  const count = document.getElementById('resultCount');
+  count.textContent = q === '' ? '' : results.length + ' product' + (results.length === 1 ? '' : 's') + ' found for "' + q + '"';
+  if (results.length === 0) {
+    document.getElementById('pgrid').innerHTML = '<p class="sub" style="grid-column:1/-1;text-align:center;padding:30px">😕 No products match "' + q + '". Try another keyword!</p>';
+  } else {
+    renderCatalog(results);
   }
 }
 

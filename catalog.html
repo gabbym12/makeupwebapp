@@ -17,9 +17,10 @@
   </nav>
 <main>
   <h1>🛍️ Product Catalog</h1>
-  <p class="sub">Browse the full Glam Empire makeup collection. Search, filters, ratings, and favorites arrive in Phase 1 and 2!</p>
+  <p class="sub">Browse the full Glam Empire makeup collection. Search products by keyword!</p>
   <div class="toolbar">
-    <!-- Phase 1: search bar + category filters go here -->
+    <input type="text" id="searchBar" placeholder="🔎 Search products... (try: lipstick, GlamCo, eyes, glow)" oninput="onSearch()" />
+    <span id="resultCount" class="sub"></span>
   </div>
   <div id="pgrid" class="pgrid"></div>
 </main>
