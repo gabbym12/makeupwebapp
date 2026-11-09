@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
-import { ArrowRight, ArrowUp, Flower2, Menu, X } from "lucide-react";
+import { ArrowRight, ArrowUp, Flower2, Menu, ShoppingBag, X } from "lucide-react";
 import heroImage from "../attached_assets/generated_images/beauty-still-life.png";
+import CartDrawer, { type Cart, type CartLine } from "./CartDrawer";
 
+type ProductVariant = {
+  id: string;
+  title: string;
+  availableForSale: boolean;
+  price: { amount: string; currencyCode: string };
+};
 type Product = {
   id: string;
   title: string;
@@ -16,6 +23,7 @@ type Product = {
     minVariantPrice: { amount: string; currencyCode: string };
     maxVariantPrice: { amount: string; currencyCode: string };
   };
+  variants: { nodes: ProductVariant[] };
 };
 
 type ProductPage = {
@@ -31,6 +39,18 @@ const tickerLines = [
   "A little color, your way",
   "A counter made for curious beauty lovers",
 ];
+
+async function readCartResponse(response: Response) {
+  const data = (await response.json()) as Cart | { error?: string };
+  if (!response.ok) {
+    throw new Error(
+      "error" in data && data.error
+        ? data.error
+        : "Your bag couldn’t be updated. Please try again.",
+    );
+  }
+  return data as Cart;
+}
 
 function formatPrice(product: Product) {
   const { minVariantPrice, maxVariantPrice } = product.priceRange;
@@ -64,6 +84,14 @@ export default function App() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState("");
   const [retryCount, setRetryCount] = useState(0);
+  const [selectedVariantIds, setSelectedVariantIds] = useState<Record<string, string>>({});
+  const [cart, setCart] = useState<Cart | null>(null);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [cartHydrated, setCartHydrated] = useState(false);
+  const [cartBusy, setCartBusy] = useState(false);
+  const [checkoutBusy, setCheckoutBusy] = useState(false);
+  const [cartError, setCartError] = useState("");
+  const [cartNotice, setCartNotice] = useState("");
 
   const closeMenu = () => setMenuOpen(false);
 
@@ -102,6 +130,41 @@ export default function App() {
     return () => controller.abort();
   }, [retryCount]);
 
+  useEffect(() => {
+    const savedCartId = window.localStorage.getItem("makeup-counter-cart-id");
+    if (!savedCartId) {
+      setCartHydrated(true);
+      return;
+    }
+
+    async function restoreCart() {
+      try {
+        const params = new URLSearchParams({ cartId: savedCartId! });
+        const response = await fetch(`/api/cart?${params.toString()}`);
+        if (response.status === 404 || response.status === 400) {
+          window.localStorage.removeItem("makeup-counter-cart-id");
+          return;
+        }
+        setCart(await readCartResponse(response));
+      } catch {
+        setCartError("Your saved bag couldn’t be loaded. Please try again.");
+      } finally {
+        setCartHydrated(true);
+      }
+    }
+
+    void restoreCart();
+  }, []);
+
+  useEffect(() => {
+    if (!cartHydrated) return;
+    if (cart) {
+      window.localStorage.setItem("makeup-counter-cart-id", cart.id);
+    } else if (!cartError) {
+      window.localStorage.removeItem("makeup-counter-cart-id");
+    }
+  }, [cart, cartError, cartHydrated]);
+
   async function loadMoreProducts() {
     if (!pageInfo.endCursor || loadingMore) return;
     setLoadingMore(true);
@@ -129,6 +192,110 @@ export default function App() {
     }
   }
 
+  function getSelectedVariant(product: Product) {
+    const selectedId = selectedVariantIds[product.id];
+    return (
+      product.variants.nodes.find((variant) => variant.id === selectedId) ??
+      product.variants.nodes.find((variant) => variant.availableForSale) ??
+      product.variants.nodes[0]
+    );
+  }
+
+  async function addToCart(product: Product) {
+    const variant = getSelectedVariant(product);
+    if (!variant || !variant.availableForSale) {
+      setCartError("That option is unavailable. Please choose another option.");
+      setCartNotice("");
+      setCartOpen(true);
+      return;
+    }
+
+    setCartBusy(true);
+    setCartError("");
+    setCartNotice("");
+    try {
+      const response = await fetch("/api/cart", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cartId: cart?.id, variantId: variant.id, quantity: 1 }),
+      });
+      const updatedCart = await readCartResponse(response);
+      setCart(updatedCart);
+      setCartNotice(`${product.title} was added to your bag.`);
+      setCartOpen(true);
+    } catch (error) {
+      setCartError(
+        error instanceof Error
+          ? error.message
+          : "That item couldn’t be added. Check availability and try again.",
+      );
+      setCartOpen(true);
+    } finally {
+      setCartBusy(false);
+    }
+  }
+
+  async function updateCartQuantity(line: CartLine, quantity: number) {
+    if (!cart) return;
+    setCartBusy(true);
+    setCartError("");
+    setCartNotice("");
+    try {
+      const response = await fetch("/api/cart", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cartId: cart.id, lineId: line.id, quantity }),
+      });
+      setCart(await readCartResponse(response));
+    } catch (error) {
+      setCartError(error instanceof Error ? error.message : "The quantity couldn’t be updated.");
+    } finally {
+      setCartBusy(false);
+    }
+  }
+
+  async function removeFromCart(line: CartLine) {
+    if (!cart) return;
+    setCartBusy(true);
+    setCartError("");
+    setCartNotice("");
+    try {
+      const response = await fetch("/api/cart", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cartId: cart.id, lineId: line.id }),
+      });
+      setCart(await readCartResponse(response));
+    } catch (error) {
+      setCartError(error instanceof Error ? error.message : "That item couldn’t be removed.");
+    } finally {
+      setCartBusy(false);
+    }
+  }
+
+  async function goToCheckout() {
+    if (!cart || cart.lines.nodes.length === 0) return;
+    setCheckoutBusy(true);
+    setCartError("");
+    try {
+      const response = await fetch("/api/cart/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cartId: cart.id }),
+      });
+      const data = (await response.json()) as { checkoutUrl?: string; error?: string };
+      if (!response.ok || !data.checkoutUrl) {
+        throw new Error(data.error || "Checkout couldn’t be opened. Please try again.");
+      }
+      window.location.assign(data.checkoutUrl);
+    } catch (error) {
+      setCartError(error instanceof Error ? error.message : "Checkout couldn’t be opened.");
+      setCheckoutBusy(false);
+    }
+  }
+
+  const cartItemCount = cart?.lines.nodes.reduce((total, line) => total + line.quantity, 0) ?? 0;
+
   return (
     <>
       <div className="announcement">
@@ -146,6 +313,20 @@ export default function App() {
           <a href="#footer" onClick={closeMenu}>A note from us</a>
         </nav>
         <span className="header-note">Everyday beauty, thoughtfully found</span>
+        <button
+          className="header-cart"
+          type="button"
+          onClick={() => {
+            setCartOpen(true);
+            setCartError("");
+            setCartNotice("");
+          }}
+          aria-label={`Open your bag${cartItemCount ? `, ${cartItemCount} ${cartItemCount === 1 ? "item" : "items"}` : ""}`}
+        >
+          <ShoppingBag size={19} strokeWidth={1.7} aria-hidden="true" />
+          <span>Your bag</span>
+          <span className="header-cart-count" aria-hidden="true">{cartItemCount}</span>
+        </button>
         <button
           className="menu-toggle"
           type="button"
@@ -238,6 +419,8 @@ export default function App() {
           )}
           {catalogState === "ready" && products.length > 0 && (
             <>
+              {cartNotice && <p className="cart-notice" role="status">{cartNotice}</p>}
+              {cartError && <p className="catalog-cart-error" role="alert">{cartError}</p>}
               <div className="product-grid">
                 {products.map((product) => (
                   <article className="product-card" key={product.id}>
@@ -266,6 +449,41 @@ export default function App() {
                       <p className="product-description">
                         {product.description || "Details coming soon."}
                       </p>
+                      {product.variants.nodes.length > 1 && (
+                        <label className="variant-picker">
+                          <span>Choose an option</span>
+                          <select
+                            value={getSelectedVariant(product)?.id ?? ""}
+                            onChange={(event) => setSelectedVariantIds((current) => ({
+                              ...current,
+                              [product.id]: event.target.value,
+                            }))}
+                          >
+                            {product.variants.nodes.map((variant) => (
+                              <option key={variant.id} value={variant.id} disabled={!variant.availableForSale}>
+                                {variant.title} · {formatMoney(variant.price.amount, variant.price.currencyCode)}
+                                {!variant.availableForSale ? " · Unavailable" : ""}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      )}
+                      <button
+                        className="add-to-bag"
+                        type="button"
+                        disabled={
+                          cartBusy ||
+                          !getSelectedVariant(product) ||
+                          !getSelectedVariant(product)?.availableForSale
+                        }
+                        onClick={() => void addToCart(product)}
+                      >
+                        {cartBusy
+                          ? "Adding…"
+                          : !getSelectedVariant(product)?.availableForSale
+                            ? "Unavailable"
+                            : "Add to bag"}
+                      </button>
                     </div>
                   </article>
                 ))}
@@ -310,6 +528,28 @@ export default function App() {
         <span className="footer-note">Thoughtful everyday beauty. See you soon.</span>
         <a className="footer-top" href="#top">Back to top <ArrowUp size={14} aria-hidden="true" /></a>
       </footer>
+      <CartDrawer
+        cart={cart}
+        open={cartOpen}
+        busy={cartBusy}
+        error={cartError}
+        checkoutBusy={checkoutBusy}
+        onClose={() => setCartOpen(false)}
+        onQuantityChange={(line, quantity) => void updateCartQuantity(line, quantity)}
+        onRemove={(line) => void removeFromCart(line)}
+        onCheckout={() => void goToCheckout()}
+      />
     </>
   );
+}
+
+function formatMoney(amount: string, currencyCode: string) {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: currencyCode,
+    }).format(Number(amount));
+  } catch {
+    return `${currencyCode} ${amount}`;
+  }
 }

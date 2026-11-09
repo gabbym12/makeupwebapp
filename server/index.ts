@@ -2,6 +2,15 @@ import { createServer as createHttpServer } from "node:http";
 import express from "express";
 import { resolve } from "node:path";
 import { createServer as createViteServer } from "vite";
+import {
+  addCartLine,
+  createCart,
+  getCart,
+  getCheckoutUrl,
+  removeCartLine,
+  ShopifyCartError,
+  updateCartLine,
+} from "./shopifyCart.js";
 import { shopifyStorefrontRequest } from "./shopifyStorefrontClient.js";
 
 const PRODUCTS_PER_PAGE = 24;
@@ -34,6 +43,14 @@ type ShopifyProduct = {
     minVariantPrice: { amount: string; currencyCode: string };
     maxVariantPrice: { amount: string; currencyCode: string };
   };
+  variants: {
+    nodes: Array<{
+      id: string;
+      title: string;
+      availableForSale: boolean;
+      price: { amount: string; currencyCode: string };
+    }>;
+  };
 };
 
 type ProductPage = ShopifyProductsResponse["products"];
@@ -65,6 +82,17 @@ const PRODUCTS_QUERY = `#graphql
             currencyCode
           }
         }
+        variants(first: 20) {
+          nodes {
+            id
+            title
+            availableForSale
+            price {
+              amount
+              currencyCode
+            }
+          }
+        }
       }
       pageInfo {
         hasNextPage
@@ -73,6 +101,8 @@ const PRODUCTS_QUERY = `#graphql
     }
   }
 `;
+
+app.use(express.json({ limit: "16kb" }));
 
 app.get("/api/products", async (request, response) => {
   const cursorValue = request.query.cursor;
@@ -120,6 +150,146 @@ app.get("/api/products", async (request, response) => {
     response.status(502).json({
       error: "The product list couldn’t be loaded from Shopify. Please try again.",
     });
+  }
+});
+
+const MAX_CART_QUANTITY = 99;
+
+function isShopifyId(value: unknown, type: "Cart" | "CartLine" | "ProductVariant") {
+  return (
+    typeof value === "string" &&
+    value.length <= 2048 &&
+    value.startsWith(`gid://shopify/${type}/`)
+  );
+}
+
+function readCartInput(request: express.Request, response: express.Response) {
+  const { cartId, lineId, variantId, quantity } = request.body ?? {};
+  if (
+    cartId !== undefined &&
+    !isShopifyId(cartId, "Cart")
+  ) {
+    response.status(400).json({ error: "This cart is no longer available. Please start a new cart." });
+    return null;
+  }
+  if (
+    lineId !== undefined &&
+    !isShopifyId(lineId, "CartLine")
+  ) {
+    response.status(400).json({ error: "That item is no longer available in your cart." });
+    return null;
+  }
+  if (
+    variantId !== undefined &&
+    !isShopifyId(variantId, "ProductVariant")
+  ) {
+    response.status(400).json({ error: "Please choose an available product option." });
+    return null;
+  }
+  if (
+    quantity !== undefined &&
+    (!Number.isInteger(quantity) || quantity < 1 || quantity > MAX_CART_QUANTITY)
+  ) {
+    response.status(400).json({ error: `Choose a quantity from 1 to ${MAX_CART_QUANTITY}.` });
+    return null;
+  }
+  return { cartId, lineId, variantId, quantity } as {
+    cartId?: string;
+    lineId?: string;
+    variantId?: string;
+    quantity?: number;
+  };
+}
+
+function sendCartError(response: express.Response, error: unknown, fallback: string) {
+  if (error instanceof ShopifyCartError) {
+    response.status(422).json({ error: error.message });
+    return;
+  }
+  console.error("Shopify cart request failed.");
+  response.status(502).json({ error: fallback });
+}
+
+app.get("/api/cart", async (request, response) => {
+  const cartId = request.query.cartId;
+  if (!isShopifyId(cartId, "Cart")) {
+    response.status(400).json({ error: "This cart is no longer available. Please start a new cart." });
+    return;
+  }
+  try {
+    const cart = await getCart(cartId as string);
+    if (!cart) {
+      response.status(404).json({ error: "This cart is no longer available. Please start a new cart." });
+      return;
+    }
+    response.setHeader("Cache-Control", "no-store");
+    response.json(cart);
+  } catch (error) {
+    sendCartError(response, error, "Your cart couldn’t be loaded. Please try again.");
+  }
+});
+
+app.post("/api/cart", async (request, response) => {
+  const input = readCartInput(request, response);
+  if (!input || !input.variantId || !input.quantity) {
+    if (input) response.status(400).json({ error: "Choose a product option before adding it." });
+    return;
+  }
+  try {
+    const cart = input.cartId
+      ? await addCartLine(input.cartId, input.variantId, input.quantity)
+      : await createCart(input.variantId, input.quantity);
+    response.setHeader("Cache-Control", "no-store");
+    response.json(cart);
+  } catch (error) {
+    sendCartError(response, error, "That item couldn’t be added. Check availability and try again.");
+  }
+});
+
+app.patch("/api/cart", async (request, response) => {
+  const input = readCartInput(request, response);
+  if (!input) return;
+  if (!input.cartId || !input.lineId || !input.quantity) {
+    response.status(400).json({ error: "Choose a cart item and a quantity to update." });
+    return;
+  }
+  try {
+    const cart = await updateCartLine(input.cartId, input.lineId, input.quantity);
+    response.setHeader("Cache-Control", "no-store");
+    response.json(cart);
+  } catch (error) {
+    sendCartError(response, error, "That quantity couldn’t be updated. Please try again.");
+  }
+});
+
+app.delete("/api/cart", async (request, response) => {
+  const input = readCartInput(request, response);
+  if (!input) return;
+  if (!input.cartId || !input.lineId) {
+    response.status(400).json({ error: "Choose a cart item to remove." });
+    return;
+  }
+  try {
+    const cart = await removeCartLine(input.cartId, input.lineId);
+    response.setHeader("Cache-Control", "no-store");
+    response.json(cart);
+  } catch (error) {
+    sendCartError(response, error, "That item couldn’t be removed. Please try again.");
+  }
+});
+
+app.post("/api/cart/checkout", async (request, response) => {
+  const input = readCartInput(request, response);
+  if (!input) return;
+  if (!input.cartId) {
+    response.status(400).json({ error: "Add an item before checking out." });
+    return;
+  }
+  try {
+    response.setHeader("Cache-Control", "no-store");
+    response.json({ checkoutUrl: await getCheckoutUrl(input.cartId) });
+  } catch (error) {
+    sendCartError(response, error, "Checkout couldn’t be opened. Please try again.");
   }
 });
 

@@ -18,4 +18,10 @@ npm run build
 ```
 
 The current storefront label is provisional. Product listings and checkout are
-not enabled until the store's products are chosen and configured.
+available for products published to the connected Shopify storefront. Shoppers
+select a product variant in the app, then use Shopify's hosted checkout.
+
+Development mode adds Shopify's `channel=online_store` preview parameter for
+protected development stores. For a production deployment, set
+`SHOPIFY_USE_DEV_STORE_PREVIEW=true` while it still targets a development store;
+set it to `false` for a live store. Production defaults to the live-store URL.
