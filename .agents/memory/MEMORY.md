@@ -1,2 +1,2 @@
 - [Git branch policy](git-branch-policy.md) — Keep all project work on `feature`; do not work on `main`.
-- [Storefront scope](storefront-scope.md) — This project is a makeup shop, not a game; keep work aligned with the user's confirmed direction.
+- [Storefront scope](storefront-scope.md) — Keep the Shopify makeup shop and its separate one-page Shade Match game.

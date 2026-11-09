@@ -1,8 +1,13 @@
 # Project notes
 
-This project is a React + Vite makeup storefront connected to Shopify. Its
-current page is an intentionally empty catalog state; it does not contain demo
-products or a checkout flow.
+This project is a React + Vite makeup shop connected to Shopify, with a separate
+Shade Match mini-game.
+
+- `/` is the Shopify storefront. It shows published products, or an empty state
+  when the connected catalog has none.
+- `/game` is a five-round, makeup-themed color matching game. Its shade swatches
+  are game content and are not Shopify products.
+- The shop's bag and checkout use Shopify's cart and hosted checkout.
 
 ## Running the app
 
@@ -18,5 +23,5 @@ For a production build, run:
 npm run build
 ```
 
-The displayed store name is provisional. Add real products through Shopify
-before building the product catalog and hosted checkout flow.
+The displayed store name is provisional. Add and publish real products through
+Shopify for them to appear in the store.

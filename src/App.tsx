@@ -309,6 +309,7 @@ export default function App() {
 
         <nav id="main-navigation" className={`nav-links${menuOpen ? " is-open" : ""}`} aria-label="Main navigation">
           <a href="#counter" onClick={closeMenu}>The counter</a>
+          <a href="/game" onClick={closeMenu}>Play shade match</a>
           <a href="#our-approach" onClick={closeMenu}>Our approach</a>
           <a href="#footer" onClick={closeMenu}>A note from us</a>
         </nav>
