@@ -1,26 +1,5 @@
-// Shopify Store stores its connection_settings privately in `settings`
-// (encrypted at rest, Admin tokens, refresh state, plus the public-facing
-// Storefront fields `shop_domain` and `storefront_access_token`).
-// `connection.public_settings` is intentionally empty for this connector;
-// the OpenInt `public_settings` split was rolled back per OpenInt #1703.
-//
-// This helper fetches `items[0].settings` from
-// `/api/v2/connection?include_secrets=true&...` using the standard Replit
-// connector proxy auth (REPL_IDENTITY / WEB_REPL_RENEWAL on
-// `X_REPLIT_TOKEN`) and extracts ONLY `shop_domain` and
-// `storefront_access_token` for app code. Other private settings (Admin
-// tokens, refresh state, transfer status, `shop_id`) are never read or
-// cached, so unrelated secrets stay out of generated app surface area.
-// Shopify treats the Storefront access token as a public buyer-facing
-// credential, so it is safe to send to Shopify's Storefront API from
-// server-side app code.
-//
-// The Storefront API version is pinned to a known-good Shopify release
-// rather than read from the connection. Dev-store preview behavior
-// (appending `channel=online_store` to checkout URLs for password-gated
-// Vibe stores) is no longer auto-detected from the connection — pass
-// `useDevStorePreview` to `shopifyStorefrontRequest` callers / cart
-// helpers when the agent context indicates a dev/preview environment.
+// This helper reads only the public Storefront fields from the Shopify
+// connection. Keep it server-side; the browser must never receive the token.
 const STOREFRONT_API_VERSION = "2026-04";
 
 type ShopifyConnectionSettings = {
@@ -64,13 +43,10 @@ function getOpenIntConnectionConfig() {
   connectionUrl.searchParams.set("connector_names", "shopify-store");
   connectionUrl.searchParams.set("refresh_policy", "none");
 
-  return {
-    connectionUrl: connectionUrl.toString(),
-    token,
-  };
+  return { connectionUrl: connectionUrl.toString(), token };
 }
 
-export async function getShopifyStorefrontConfig(
+async function getShopifyStorefrontConfig(
   options: { forceRefresh?: boolean } = {},
 ): Promise<ShopifyStorefrontConfig> {
   if (cachedConfig && !options.forceRefresh && Date.now() < cachedConfig.expiresAt) {
@@ -78,13 +54,7 @@ export async function getShopifyStorefrontConfig(
   }
 
   const { connectionUrl, token } = getOpenIntConnectionConfig();
-  // `cache: "no-store"` opts out of framework-enhanced fetch caching
-  // (Next.js SSR / server actions, edge runtimes). This helper's own
-  // 60s TTL + the 401/403 forceRefresh path are the only intended cache
-  // boundaries; framework caching would defeat the retry by handing
-  // back a stale connection response after OpenInt remints the
-  // Storefront token (e.g. during Go Live).
-  const resp = await fetch(connectionUrl, {
+  const response = await fetch(connectionUrl, {
     headers: {
       Accept: "application/json",
       X_REPLIT_TOKEN: token,
@@ -93,11 +63,11 @@ export async function getShopifyStorefrontConfig(
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
 
-  if (!resp.ok) {
-    throw new Error(`Failed to fetch Shopify connection: ${resp.status}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch Shopify connection: ${response.status}`);
   }
 
-  const data = (await resp.json()) as ShopifyConnectionResponse;
+  const data = (await response.json()) as ShopifyConnectionResponse;
   const settings = data.items?.[0]?.settings;
   if (!settings?.shop_domain || !settings.storefront_access_token) {
     throw new Error(
@@ -105,9 +75,6 @@ export async function getShopifyStorefrontConfig(
     );
   }
 
-  // Extract only the Storefront-facing fields so unrelated private
-  // settings (Admin tokens, refresh state, transfer status, shop_id)
-  // never reach generated app code or the in-memory cache.
   cachedConfig = {
     value: {
       shopDomain: settings.shop_domain,
@@ -124,8 +91,7 @@ export async function shopifyStorefrontRequest<T>(
   options: { retryOnUnauthorized?: boolean } = {},
 ): Promise<T> {
   const config = await getShopifyStorefrontConfig();
-
-  const resp = await fetch(
+  const response = await fetch(
     `https://${config.shopDomain}/api/${STOREFRONT_API_VERSION}/graphql.json`,
     {
       method: "POST",
@@ -140,7 +106,7 @@ export async function shopifyStorefrontRequest<T>(
 
   if (
     options.retryOnUnauthorized !== false &&
-    (resp.status === 401 || resp.status === 403)
+    (response.status === 401 || response.status === 403)
   ) {
     cachedConfig = undefined;
     await getShopifyStorefrontConfig({ forceRefresh: true });
@@ -149,11 +115,11 @@ export async function shopifyStorefrontRequest<T>(
     });
   }
 
-  const text = await resp.text();
+  const text = await response.text();
   const json = text ? safeJsonParse(text) : {};
-  if (!resp.ok || json.errors?.length) {
+  if (!response.ok || json.errors?.length) {
     throw new Error(
-      `Shopify Storefront API error (${resp.status}): ${JSON.stringify(json.errors ?? json)}`,
+      `Shopify Storefront API error (${response.status}): ${JSON.stringify(json.errors ?? json)}`,
     );
   }
 

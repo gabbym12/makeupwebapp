@@ -8,9 +8,21 @@ type Product = {
   handle: string;
   description: string;
   availableForSale: boolean;
-  featuredImage: { url: string; altText: string | null } | null;
+  featuredImage: {
+    url: string;
+    altText: string | null;
+  } | null;
   priceRange: {
     minVariantPrice: { amount: string; currencyCode: string };
+    maxVariantPrice: { amount: string; currencyCode: string };
+  };
+};
+
+type ProductPage = {
+  nodes: Product[];
+  pageInfo: {
+    hasNextPage: boolean;
+    endCursor: string | null;
   };
 };
 
@@ -20,22 +32,38 @@ const tickerLines = [
   "A counter made for curious beauty lovers",
 ];
 
-function formatPrice(amount: string, currencyCode: string) {
+function formatPrice(product: Product) {
+  const { minVariantPrice, maxVariantPrice } = product.priceRange;
   try {
-    return new Intl.NumberFormat(undefined, {
-      style: "currency",
-      currency: currencyCode,
-    }).format(Number(amount));
+    const format = (amount: string, currencyCode: string) =>
+      new Intl.NumberFormat(undefined, {
+        style: "currency",
+        currency: currencyCode,
+      }).format(Number(amount));
+    const minimum = format(minVariantPrice.amount, minVariantPrice.currencyCode);
+
+    if (minVariantPrice.amount === maxVariantPrice.amount) return minimum;
+    return `From ${minimum}`;
   } catch {
-    return `${currencyCode} ${amount}`;
+    const minimum = `${minVariantPrice.currencyCode} ${minVariantPrice.amount}`;
+    return minVariantPrice.amount === maxVariantPrice.amount
+      ? minimum
+      : `From ${minimum}`;
   }
 }
 
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
+  const [pageInfo, setPageInfo] = useState<ProductPage["pageInfo"]>({
+    hasNextPage: false,
+    endCursor: null,
+  });
   const [catalogState, setCatalogState] = useState<"loading" | "ready" | "error">("loading");
-  const [reloadToken, setReloadToken] = useState(0);
+  const [catalogError, setCatalogError] = useState("");
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState("");
+  const [retryCount, setRetryCount] = useState(0);
 
   const closeMenu = () => setMenuOpen(false);
 
@@ -44,25 +72,67 @@ export default function App() {
 
     async function loadProducts() {
       setCatalogState("loading");
+      setCatalogError("");
+      setProducts([]);
+      setPageInfo({ hasNextPage: false, endCursor: null });
+
       try {
         const response = await fetch("/api/products", { signal: controller.signal });
-        if (!response.ok) throw new Error("Catalog request failed");
-        const result = (await response.json()) as { products: Product[] };
-        setProducts(result.products);
+        const data = (await response.json()) as ProductPage | { error?: string };
+        if (!response.ok) {
+          throw new Error("error" in data ? data.error : undefined);
+        }
+
+        const page = data as ProductPage;
+        setProducts(page.nodes);
+        setPageInfo(page.pageInfo);
         setCatalogState("ready");
-      } catch {
-        if (!controller.signal.aborted) setCatalogState("error");
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        setCatalogError(
+          error instanceof Error && error.message
+            ? error.message
+            : "The product list couldn’t be loaded from Shopify. Please try again.",
+        );
+        setCatalogState("error");
       }
     }
 
     void loadProducts();
     return () => controller.abort();
-  }, [reloadToken]);
+  }, [retryCount]);
+
+  async function loadMoreProducts() {
+    if (!pageInfo.endCursor || loadingMore) return;
+    setLoadingMore(true);
+    setLoadMoreError("");
+
+    try {
+      const params = new URLSearchParams({ cursor: pageInfo.endCursor });
+      const response = await fetch(`/api/products?${params.toString()}`);
+      const data = (await response.json()) as ProductPage | { error?: string };
+      if (!response.ok) {
+        throw new Error("error" in data ? data.error : undefined);
+      }
+
+      const page = data as ProductPage;
+      setProducts((current) => [...current, ...page.nodes]);
+      setPageInfo(page.pageInfo);
+    } catch (error) {
+      setLoadMoreError(
+        error instanceof Error && error.message
+          ? error.message
+          : "More products couldn’t be loaded. Please try again.",
+      );
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   return (
     <>
       <div className="announcement">
-        A new beauty counter is taking shape <span aria-hidden="true">&nbsp;·&nbsp;</span> More soon
+        A welcoming place to explore makeup <span aria-hidden="true">&nbsp;·&nbsp;</span> Find your kind of glow
       </div>
       <header className="site-header" id="top">
         <a className="wordmark" href="#top" onClick={closeMenu} aria-label="The Makeup Counter, home">
@@ -130,79 +200,91 @@ export default function App() {
             </div>
             <p className="heading-aside">A considered edit for wherever your day takes you.</p>
           </div>
-          {catalogState === "ready" && products.length > 0 ? (
-            <div className="product-grid">
-              {products.map((product) => (
-                <article className="product-card" key={product.id}>
-                  <div className="product-image-wrap">
-                    {product.featuredImage ? (
-                      <img
-                        className="product-image"
-                        src={product.featuredImage.url}
-                        alt={product.featuredImage.altText || product.title}
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="product-image-placeholder" aria-hidden="true">
-                        <Flower2 size={48} strokeWidth={0.8} />
-                      </div>
-                    )}
-                    <span className={`product-availability${product.availableForSale ? "" : " is-unavailable"}`}>
-                      {product.availableForSale ? "Available" : "Sold out"}
-                    </span>
-                  </div>
-                  <div className="product-card-copy">
-                    <div className="product-title-row">
-                      <h3>{product.title}</h3>
-                      <span className="product-price">
-                        {formatPrice(
-                          product.priceRange.minVariantPrice.amount,
-                          product.priceRange.minVariantPrice.currencyCode,
-                        )}
-                      </span>
-                    </div>
-                    {product.description && <p>{product.description}</p>}
-                  </div>
-                </article>
-              ))}
+          {catalogState === "loading" && (
+            <div className="catalog-state" role="status" aria-live="polite">
+              <span className="loading-spinner" aria-hidden="true" />
+              <p>Looking through the counter…</p>
             </div>
-          ) : (
-            <div className="empty-panel" aria-live="polite">
+          )}
+          {catalogState === "error" && (
+            <div className="catalog-state catalog-state-error" role="alert">
+              <h3>We couldn’t reach the counter.</h3>
+              <p>{catalogError}</p>
+              <button
+                className="catalog-button"
+                type="button"
+                onClick={() => setRetryCount((count) => count + 1)}
+              >
+                Try again
+              </button>
+            </div>
+          )}
+          {catalogState === "ready" && products.length === 0 && (
+            <div className="empty-panel">
               <div className="empty-art" aria-hidden="true">
                 <div className="empty-orbit" />
                 <Flower2 className="empty-flower" strokeWidth={0.8} />
                 <span className="empty-sticker">A new<br />chapter</span>
               </div>
               <div className="empty-copy">
-                <span className="status-line">
-                  <span className={`status-dot${catalogState === "error" ? " is-error" : ""}`} />
-                  {catalogState === "loading" ? "Loading the counter" : catalogState === "error" ? "Catalog unavailable" : "Store connected"}
-                </span>
-                <h3>
-                  {catalogState === "loading"
-                    ? "A moment while we look."
-                    : catalogState === "error"
-                      ? "We couldn’t reach the shop."
-                      : "We’re setting out the first things."}
-                </h3>
+                <span className="status-line"><span className="status-dot" /> Shopify connected</span>
+                <h3>There’s nothing on the counter just yet.</h3>
                 <p>
-                  {catalogState === "loading"
-                    ? "We’re checking the connected Shopify catalog for what’s available."
-                    : catalogState === "error"
-                      ? "The product list didn’t load from Shopify. Try again in a moment."
-                      : "Our shelves are still being arranged. There aren’t any products here just yet, but this little beauty counter is getting ready to welcome you."}
+                  Products will appear here once they’re available on the Shopify storefront.
+                  Your shop is ready whenever you are.
                 </p>
-                {catalogState === "error" ? (
-                  <button className="retry-button" type="button" onClick={() => setReloadToken((token) => token + 1)}>
-                    Try again <ArrowRight size={14} aria-hidden="true" />
-                  </button>
-                ) : (
-                  <p className="subtle-note">
-                    {catalogState === "loading" ? "Product availability comes directly from the store." : "Check back soon. Good things take a little choosing."}
-                  </p>
-                )}
               </div>
             </div>
+          )}
+          {catalogState === "ready" && products.length > 0 && (
+            <>
+              <div className="product-grid">
+                {products.map((product) => (
+                  <article className="product-card" key={product.id}>
+                    <div className="product-image-wrap">
+                      {product.featuredImage ? (
+                        <img
+                          className="product-image"
+                          src={product.featuredImage.url}
+                          alt={product.featuredImage.altText || product.title}
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="product-image-fallback" aria-hidden="true">
+                          <Flower2 size={58} strokeWidth={0.8} />
+                        </div>
+                      )}
+                      <span className={`product-availability${product.availableForSale ? "" : " is-sold-out"}`}>
+                        {product.availableForSale ? "Available" : "Sold out"}
+                      </span>
+                    </div>
+                    <div className="product-copy">
+                      <div className="product-title-row">
+                        <h3>{product.title}</h3>
+                        <span className="product-price">{formatPrice(product)}</span>
+                      </div>
+                      <p className="product-description">
+                        {product.description || "Details coming soon."}
+                      </p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+              {pageInfo.hasNextPage && (
+                <div className="catalog-more">
+                  {loadMoreError && <p className="catalog-more-error" role="alert">{loadMoreError}</p>}
+                  <button
+                    className="catalog-button"
+                    type="button"
+                    onClick={loadMoreProducts}
+                    disabled={loadingMore}
+                  >
+                    {loadingMore ? "Loading more…" : loadMoreError ? "Try again" : "Show more"}
+                    {!loadingMore && <ArrowRight size={15} aria-hidden="true" />}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </section>
 
@@ -225,7 +307,7 @@ export default function App() {
           <span className="wordmark-main">the makeup counter</span>
           <span className="wordmark-sub">A place to play with color</span>
         </a>
-        <span className="footer-note">A new counter is taking shape. See you soon.</span>
+        <span className="footer-note">Thoughtful everyday beauty. See you soon.</span>
         <a className="footer-top" href="#top">Back to top <ArrowUp size={14} aria-hidden="true" /></a>
       </footer>
     </>

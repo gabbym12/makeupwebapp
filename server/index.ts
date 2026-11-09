@@ -1,8 +1,24 @@
 import { createServer as createHttpServer } from "node:http";
-import { resolve } from "node:path";
 import express from "express";
+import { resolve } from "node:path";
 import { createServer as createViteServer } from "vite";
-import { shopifyStorefrontRequest } from "./shopifyStorefrontClient.ts";
+import { shopifyStorefrontRequest } from "./shopifyStorefrontClient.js";
+
+const PRODUCTS_PER_PAGE = 24;
+const PRODUCT_CACHE_TTL_MS = 45_000;
+const MAX_CACHED_PAGES = 20;
+const app = express();
+const httpServer = createHttpServer(app);
+
+type ShopifyProductsResponse = {
+  products: {
+    nodes: ShopifyProduct[];
+    pageInfo: {
+      hasNextPage: boolean;
+      endCursor: string | null;
+    };
+  };
+};
 
 type ShopifyProduct = {
   id: string;
@@ -10,73 +26,119 @@ type ShopifyProduct = {
   handle: string;
   description: string;
   availableForSale: boolean;
-  featuredImage: { url: string; altText: string | null } | null;
+  featuredImage: {
+    url: string;
+    altText: string | null;
+  } | null;
   priceRange: {
     minVariantPrice: { amount: string; currencyCode: string };
+    maxVariantPrice: { amount: string; currencyCode: string };
   };
 };
 
-type ProductsResponse = {
-  products: { nodes: ShopifyProduct[] };
-};
+type ProductPage = ShopifyProductsResponse["products"];
+const productPageCache = new Map<
+  string,
+  { value: ProductPage; expiresAt: number }
+>();
 
-const productsQuery = `#graphql
-  query Products {
-    products(first: 24, sortKey: TITLE) {
+const PRODUCTS_QUERY = `#graphql
+  query Products($after: String) {
+    products(first: ${PRODUCTS_PER_PAGE}, after: $after, sortKey: TITLE) {
       nodes {
         id
         title
         handle
         description
         availableForSale
-        featuredImage { url altText }
-        priceRange { minVariantPrice { amount currencyCode } }
+        featuredImage {
+          url
+          altText
+        }
+        priceRange {
+          minVariantPrice {
+            amount
+            currencyCode
+          }
+          maxVariantPrice {
+            amount
+            currencyCode
+          }
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
       }
     }
   }
 `;
 
-const app = express();
-const httpServer = createHttpServer(app);
-const cacheDurationMs = 60_000;
-let cachedProducts: { products: ShopifyProduct[]; expiresAt: number } | undefined;
+app.get("/api/products", async (request, response) => {
+  const cursorValue = request.query.cursor;
+  const cursor = typeof cursorValue === "string" ? cursorValue : "";
+  if (cursor.length > 2048) {
+    response.status(400).json({ error: "Invalid product page." });
+    return;
+  }
 
-app.get("/api/products", async (_request, response) => {
-  response.setHeader("Cache-Control", "public, max-age=60");
-
-  if (cachedProducts && Date.now() < cachedProducts.expiresAt) {
-    response.json({ products: cachedProducts.products });
+  const cacheKey = cursor || "__first_page__";
+  const cached = productPageCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    response.setHeader("Cache-Control", "private, max-age=30");
+    response.json(cached.value);
     return;
   }
 
   try {
-    const result = await shopifyStorefrontRequest<ProductsResponse>(productsQuery);
-    if (!Array.isArray(result.products?.nodes)) {
+    const data = await shopifyStorefrontRequest<ShopifyProductsResponse>(
+      PRODUCTS_QUERY,
+      { after: cursor || null },
+    );
+    if (!Array.isArray(data.products?.nodes) || !data.products?.pageInfo) {
       throw new Error("Shopify returned an invalid product list.");
     }
+    const products = data.products;
+    productPageCache.set(cacheKey, {
+      value: products,
+      expiresAt: Date.now() + PRODUCT_CACHE_TTL_MS,
+    });
 
-    cachedProducts = {
-      products: result.products.nodes,
-      expiresAt: Date.now() + cacheDurationMs,
-    };
-    response.json({ products: cachedProducts.products });
-  } catch {
+    for (const [key, entry] of productPageCache) {
+      if (entry.expiresAt <= Date.now()) productPageCache.delete(key);
+    }
+    while (productPageCache.size > MAX_CACHED_PAGES) {
+      const oldestKey = productPageCache.keys().next().value;
+      if (oldestKey === undefined) break;
+      productPageCache.delete(oldestKey);
+    }
+
+    response.setHeader("Cache-Control", "private, max-age=30");
+    response.json(products);
+  } catch (error) {
     console.error("Shopify catalog request failed.");
     response.status(502).json({
-      error: "Unable to load the catalog from Shopify right now.",
+      error: "The product list couldn’t be loaded from Shopify. Please try again.",
     });
   }
 });
 
-async function startServer() {
-  if (process.env.NODE_ENV === "production") {
-    app.use(express.static(resolve(process.cwd(), "dist")));
-    app.use((request, response) => {
-      if (request.method === "GET" && request.accepts("html")) {
-        response.sendFile(resolve(process.cwd(), "dist", "index.html"));
+async function start() {
+  const isProduction = process.env.NODE_ENV === "production";
+
+  if (isProduction) {
+    const distPath = resolve(process.cwd(), "dist");
+    app.use(express.static(distPath));
+    app.use((request, response, next) => {
+      if (request.method !== "GET" || request.path.startsWith("/api/")) {
+        next();
         return;
       }
-      response.status(404).json({ error: "Not found." });
+      if (request.accepts("html")) {
+        response.sendFile(resolve(distPath, "index.html"));
+        return;
+      }
+      next();
     });
   } else {
     const vite = await createViteServer({
@@ -95,7 +157,7 @@ async function startServer() {
   });
 }
 
-void startServer().catch(() => {
+void start().catch(() => {
   console.error("The storefront server failed to start.");
   process.exitCode = 1;
 });
