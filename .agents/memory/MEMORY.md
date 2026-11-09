@@ -1,0 +1,1 @@
+- [Git branch policy](git-branch-policy.md) — Keep all project work on `feature`; do not work on `main`.
