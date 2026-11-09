@@ -1,6 +1,18 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowRight, ArrowUp, Flower2, Menu, X } from "lucide-react";
 import heroImage from "../attached_assets/generated_images/beauty-still-life.png";
+
+type Product = {
+  id: string;
+  title: string;
+  handle: string;
+  description: string;
+  availableForSale: boolean;
+  featuredImage: { url: string; altText: string | null } | null;
+  priceRange: {
+    minVariantPrice: { amount: string; currencyCode: string };
+  };
+};
 
 const tickerLines = [
   "Makeup for your real-life routine",
@@ -8,10 +20,44 @@ const tickerLines = [
   "A counter made for curious beauty lovers",
 ];
 
+function formatPrice(amount: string, currencyCode: string) {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: currencyCode,
+    }).format(Number(amount));
+  } catch {
+    return `${currencyCode} ${amount}`;
+  }
+}
+
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [catalogState, setCatalogState] = useState<"loading" | "ready" | "error">("loading");
+  const [reloadToken, setReloadToken] = useState(0);
 
   const closeMenu = () => setMenuOpen(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadProducts() {
+      setCatalogState("loading");
+      try {
+        const response = await fetch("/api/products", { signal: controller.signal });
+        if (!response.ok) throw new Error("Catalog request failed");
+        const result = (await response.json()) as { products: Product[] };
+        setProducts(result.products);
+        setCatalogState("ready");
+      } catch {
+        if (!controller.signal.aborted) setCatalogState("error");
+      }
+    }
+
+    void loadProducts();
+    return () => controller.abort();
+  }, [reloadToken]);
 
   return (
     <>
@@ -84,22 +130,80 @@ export default function App() {
             </div>
             <p className="heading-aside">A considered edit for wherever your day takes you.</p>
           </div>
-          <div className="empty-panel">
-            <div className="empty-art" aria-hidden="true">
-              <div className="empty-orbit" />
-              <Flower2 className="empty-flower" strokeWidth={0.8} />
-              <span className="empty-sticker">A new<br />chapter</span>
+          {catalogState === "ready" && products.length > 0 ? (
+            <div className="product-grid">
+              {products.map((product) => (
+                <article className="product-card" key={product.id}>
+                  <div className="product-image-wrap">
+                    {product.featuredImage ? (
+                      <img
+                        className="product-image"
+                        src={product.featuredImage.url}
+                        alt={product.featuredImage.altText || product.title}
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="product-image-placeholder" aria-hidden="true">
+                        <Flower2 size={48} strokeWidth={0.8} />
+                      </div>
+                    )}
+                    <span className={`product-availability${product.availableForSale ? "" : " is-unavailable"}`}>
+                      {product.availableForSale ? "Available" : "Sold out"}
+                    </span>
+                  </div>
+                  <div className="product-card-copy">
+                    <div className="product-title-row">
+                      <h3>{product.title}</h3>
+                      <span className="product-price">
+                        {formatPrice(
+                          product.priceRange.minVariantPrice.amount,
+                          product.priceRange.minVariantPrice.currencyCode,
+                        )}
+                      </span>
+                    </div>
+                    {product.description && <p>{product.description}</p>}
+                  </div>
+                </article>
+              ))}
             </div>
-            <div className="empty-copy">
-              <span className="status-line"><span className="status-dot" /> Store connected</span>
-              <h3>We’re setting out the first things.</h3>
-              <p>
-                Our shelves are still being arranged. There aren’t any products here just yet,
-                but this little beauty counter is getting ready to welcome you.
-              </p>
-              <p className="subtle-note">Check back soon. Good things take a little choosing.</p>
+          ) : (
+            <div className="empty-panel" aria-live="polite">
+              <div className="empty-art" aria-hidden="true">
+                <div className="empty-orbit" />
+                <Flower2 className="empty-flower" strokeWidth={0.8} />
+                <span className="empty-sticker">A new<br />chapter</span>
+              </div>
+              <div className="empty-copy">
+                <span className="status-line">
+                  <span className={`status-dot${catalogState === "error" ? " is-error" : ""}`} />
+                  {catalogState === "loading" ? "Loading the counter" : catalogState === "error" ? "Catalog unavailable" : "Store connected"}
+                </span>
+                <h3>
+                  {catalogState === "loading"
+                    ? "A moment while we look."
+                    : catalogState === "error"
+                      ? "We couldn’t reach the shop."
+                      : "We’re setting out the first things."}
+                </h3>
+                <p>
+                  {catalogState === "loading"
+                    ? "We’re checking the connected Shopify catalog for what’s available."
+                    : catalogState === "error"
+                      ? "The product list didn’t load from Shopify. Try again in a moment."
+                      : "Our shelves are still being arranged. There aren’t any products here just yet, but this little beauty counter is getting ready to welcome you."}
+                </p>
+                {catalogState === "error" ? (
+                  <button className="retry-button" type="button" onClick={() => setReloadToken((token) => token + 1)}>
+                    Try again <ArrowRight size={14} aria-hidden="true" />
+                  </button>
+                ) : (
+                  <p className="subtle-note">
+                    {catalogState === "loading" ? "Product availability comes directly from the store." : "Check back soon. Good things take a little choosing."}
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </section>
 
         <section className="story" id="our-approach" aria-labelledby="story-title">
