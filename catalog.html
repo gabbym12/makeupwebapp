@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Product Catalog - Glam Empire</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <nav class="nav">
+    <a href="index.html" class="brand">💄 Glam Empire</a>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="catalog.html">Catalog</a>
+      <a href="game.html">Game</a>
+    </div>
+  </nav>
+<main>
+  <h1>🛍️ Product Catalog</h1>
+  <p class="sub">Browse the full Glam Empire makeup collection. Search products by keyword!</p>
+  <div class="toolbar">
+    <input type="text" id="searchBar" placeholder="🔎 Search products... (try: lipstick, GlamCo, eyes, glow)" oninput="onSearch()" />
+    <span id="resultCount" class="sub"></span>
+  </div>
+  <div id="pgrid" class="pgrid"></div>
+</main>
+<script src="catalog.js"></script>
+</body>
+</html>
