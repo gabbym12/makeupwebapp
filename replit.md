@@ -6,10 +6,10 @@ five-activity game arcade.
 - `/` is the Shopify storefront. It shows published products, or an empty state
   when the connected catalog has none.
 - `/game` is the game hub for Shade Match, Makeup Memory Match, Beauty Trivia,
-  Build a Makeup Look, and One-Take Memory. One-Take Memory grows from 6 to 10
-  pairs over three rounds; a miss restarts the full run, and later rounds use
-  different fixed card layouts. Game content is illustrative and is not Shopify
-  inventory.
+  Build a Makeup Look, and Memory Challenge. The challenge grows from 6 to 10
+  pairs over three rounds; wrong pairs turn back over, with a fixed layout
+  within each round and new layouts later. Game content is illustrative and is
+  not Shopify inventory.
 - The shop's bag and checkout use Shopify's cart and hosted checkout.
 
 ## Running the app

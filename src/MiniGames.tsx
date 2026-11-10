@@ -133,7 +133,7 @@ export function NoMistakesMemory({ onHub }: { onHub: () => void }) {
   const [matched, setMatched] = useState<string[]>([]);
   const [turns, setTurns] = useState(0);
   const [locked, setLocked] = useState(false);
-  const [phase, setPhase] = useState<"playing" | "between" | "failed" | "won">("playing");
+  const [phase, setPhase] = useState<"playing" | "between" | "won">("playing");
   const pairCount = ONE_TAKE_ROUNDS[round - 1].pairs;
   const deck = useMemo(() => oneTakeDeck(round), [round]);
 
@@ -148,7 +148,10 @@ export function NoMistakesMemory({ onHub }: { onHub: () => void }) {
       return;
     }
     setLocked(true);
-    const timer = window.setTimeout(() => setPhase("failed"), 950);
+    const timer = window.setTimeout(() => {
+      setFlipped([]);
+      setLocked(false);
+    }, 950);
     return () => window.clearTimeout(timer);
   }, [flipped, deck, matched.length, pairCount, phase, round]);
 
@@ -177,13 +180,12 @@ export function NoMistakesMemory({ onHub }: { onHub: () => void }) {
   }
 
   const roundLabel = ONE_TAKE_ROUNDS[round - 1].label;
-  const isFailed = phase === "failed";
   const isBetween = phase === "between";
   const isWon = phase === "won";
 
-  return <GameShell onHub={onHub} eyebrow="One-take memory · three rounds">
+  return <GameShell onHub={onHub} eyebrow="Memory challenge · three rounds">
     <div className="mini-game__heading">
-      <div><h1>One-take <em>memory.</em></h1><p>Three rounds, each a little closer in color and in a new layout. Match every pair without a mistake—or the whole run starts again.</p></div>
+      <div><h1>Memory <em>challenge.</em></h1><p>Three rounds, each a little closer in color and in a new layout. Wrong pairs turn back over, so keep trying until you find them all.</p></div>
       <div className="mini-game__stat"><strong>{String(turns).padStart(2, "0")}</strong><span>turns</span></div>
     </div>
     <div className="mini-game__progressline no-mistakes-progress">
@@ -192,22 +194,21 @@ export function NoMistakesMemory({ onHub }: { onHub: () => void }) {
       <span>{matched.length} / {pairCount} pairs · {pairCount * 2} cards</span>
     </div>
     {isBetween ? <section className="mini-game__round-break" role="status" aria-live="polite" aria-labelledby="one-take-break-title">
-      <p className="arcade__eyebrow">Round {round} complete · flawless</p>
+      <p className="arcade__eyebrow">Round {round} complete</p>
       <h2 id="one-take-break-title">{round === 1 ? "A perfect first look." : "Your eye is getting sharper."}</h2>
-      <p>You found all {pairCount} pairs without a mistake. Round {round + 1} brings {ONE_TAKE_ROUNDS[round].pairs * 2} cards, a new layout, and shades that sit even closer together.</p>
+      <p>You found all {pairCount} pairs. Round {round + 1} brings {ONE_TAKE_ROUNDS[round].pairs * 2} cards, a new layout, and shades that sit even closer together.</p>
       <button className="arcade-button" type="button" onClick={continueRound}>Continue to round {round + 1}<ArrowRight size={15} aria-hidden="true" /></button>
     </section> : <>
-      <div className={`memory-grid no-mistakes-grid no-mistakes-grid--round-${round}${isFailed ? " is-failed" : ""}`} role="group" aria-label={`One-take memory round ${round}, ${pairCount * 2} cards`}>
+      <div className={`memory-grid no-mistakes-grid no-mistakes-grid--round-${round}`} role="group" aria-label={`Memory challenge round ${round}, ${pairCount * 2} cards`}>
         {deck.map((card, index) => {
           const revealed = flipped.includes(card.key) || matched.includes(card.id);
-          return <button key={card.key} type="button" className={`memory-card${revealed ? " is-revealed" : ""}${matched.includes(card.id) ? " is-matched" : ""}${isFailed && flipped.includes(card.key) ? " is-mistake" : ""}`} onClick={() => flip(card)} disabled={revealed || locked || phase !== "playing"} aria-label={revealed ? `${card.name}, ${matched.includes(card.id) ? "matched" : "face up"}` : `Card ${index + 1}, face down`} aria-pressed={revealed}>
+          return <button key={card.key} type="button" className={`memory-card${revealed ? " is-revealed" : ""}${matched.includes(card.id) ? " is-matched" : ""}`} onClick={() => flip(card)} disabled={revealed || locked || phase !== "playing"} aria-label={revealed ? `${card.name}, ${matched.includes(card.id) ? "matched" : "face up"}` : `Card ${index + 1}, face down`} aria-pressed={revealed}>
             {revealed ? <><i style={{ background: card.color }} /><span>{card.name}</span></> : <span className="memory-card__back" aria-hidden="true">the<br />counter</span>}
           </button>;
         })}
       </div>
-      {isFailed ? <div className="mini-game__result-inline no-mistakes-result is-failed" role="status" aria-live="assertive"><div><h2>That’s the one.</h2><p>The shades didn’t match, so the full three-round run is over. Start again from Round 1; each round keeps its own layout.</p></div><button className="arcade-button" type="button" onClick={replay}><RotateCcw size={15} aria-hidden="true" /> Restart from round 1</button></div>
-        : isWon ? <div className="mini-game__result-inline no-mistakes-result" role="status" aria-live="polite"><div><h2>Three rounds. Not one mistake.</h2><p>You cleared all 24 pairs across {turns} {turns === 1 ? "turn" : "turns"}. A flawless eye.</p></div><button className="arcade-button" type="button" onClick={replay}><RotateCcw size={15} aria-hidden="true" /> Play again</button></div>
-          : <p className="mini-game__hint">Cards move to a new layout between rounds, not after each match. Every shade still has its matching pair.</p>}
+      {isWon ? <div className="mini-game__result-inline no-mistakes-result" role="status" aria-live="polite"><div><h2>Three rounds. Every pair found.</h2><p>You matched all 24 pairs across {turns} {turns === 1 ? "turn" : "turns"}. Lovely memory.</p></div><button className="arcade-button" type="button" onClick={replay}><RotateCcw size={15} aria-hidden="true" /> Play again</button></div>
+        : <p className="mini-game__hint">Wrong pairs turn back over after a moment. Keep trying; the card layout stays fixed until the next round.</p>}
     </>}
   </GameShell>;
 }
