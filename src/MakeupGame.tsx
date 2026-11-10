@@ -199,7 +199,9 @@ function makeFreshLevels(): Level[] {
 
 type Screen = "playing" | "level-complete" | "complete";
 
-export default function MakeupGame() {
+type MakeupGameProps = { onHub: () => void };
+
+export default function MakeupGame({ onHub }: MakeupGameProps) {
   const [levels, setLevels] = useState<Level[]>(makeFreshLevels);
   const [levelIndex, setLevelIndex] = useState(0);
   const [roundIndex, setRoundIndex] = useState(0);
@@ -293,10 +295,13 @@ export default function MakeupGame() {
           <span className="shade-game__brand-name">the makeup counter</span>
           <span className="shade-game__brand-note">A place to play with color</span>
         </a>
-        <a className="shade-game__back" href="/">
-          <ArrowLeft size={15} aria-hidden="true" />
-          <span>Back to the shop</span>
-        </a>
+        <div className="shade-game__header-actions">
+          <button className="shade-game__back" type="button" onClick={onHub}>
+            <ArrowLeft size={15} aria-hidden="true" />
+            <span>All games</span>
+          </button>
+          <a className="shade-game__shop-link" href="/">Visit the shop</a>
+        </div>
       </header>
 
       <main className="shade-game__main">
