@@ -920,6 +920,17 @@ a { color: inherit; }
 .no-mistakes-grid .memory-card.is-matched { border-color: #aab99f; }
 .no-mistakes-grid .memory-card.is-mistake { border-color: #c87870; background: #f2dfd8; }
 .no-mistakes-grid.is-failed .memory-card:not(.is-matched) { cursor: default; }
+.no-mistakes-grid--round-3 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.no-mistakes-grid .memory-card { min-width: 0; }
+.no-mistakes-grid--round-3 .memory-card { min-height: 126px; }
+.mini-game__round-break {
+  display: flex; min-height: 280px; flex-direction: column; align-items: flex-start; justify-content: center;
+  margin-top: 8px; padding: clamp(25px, 6vw, 48px); border: 1px solid #e1d0c0;
+  background: linear-gradient(115deg, #f2e6dc 0%, #f8f0e5 58%, #e8eadc 100%);
+}
+.mini-game__round-break .arcade__eyebrow { margin-bottom: 10px; }
+.mini-game__round-break h2 { max-width: 570px; margin: 0; color: var(--arc-plum); font-family: var(--display, Georgia, serif); font-size: clamp(32px, 5vw, 48px); font-weight: 500; letter-spacing: -.045em; line-height: 1.05; }
+.mini-game__round-break > p:not(.arcade__eyebrow) { max-width: 490px; margin: 13px 0 22px; color: var(--arc-muted); font-size: 12px; line-height: 1.75; }
 .no-mistakes-result { border-left-color: #67825b; background: #e8eddf; }
 .no-mistakes-result.is-failed { border-left-color: var(--arc-rose); background: #f4e3df; }
 .no-mistakes-result.is-failed h2 { color: #8c4546; }
@@ -1002,6 +1013,8 @@ a { color: inherit; }
   .mini-game__heading { align-items: flex-start; }
   .mini-game__stat { width: 62px; height: 62px; flex-basis: 62px; }
   .memory-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .no-mistakes-grid--round-3 .memory-card { min-height: 116px; }
+  .no-mistakes-progress { gap: 8px; font-size: 8px; }
   .memory-card { min-height: 120px; }
   .no-mistakes-result .arcade-button { align-self: flex-start; }
   .look-options { grid-template-columns: 1fr; gap: 11px; }
@@ -1026,6 +1039,10 @@ a { color: inherit; }
   .mini-game__heading h1 { font-size: 42px; }
   .mini-game__heading > div:first-child > p:not(.arcade__eyebrow) { font-size: 11px; }
   .memory-card { min-height: 103px; }
+  .no-mistakes-grid--round-3 .memory-card { min-height: 103px; }
+  .no-mistakes-progress { flex-wrap: wrap; }
+  .no-mistakes-progress > div { flex-basis: 100%; order: 3; }
+  .no-mistakes-progress > span:last-child { margin-left: auto; text-align: right; }
   .memory-card > i { width: 47px; height: 55px; }
   .memory-card__back { width: 58px; height: 58px; font-size: 12px; }
   .trivia-options { grid-template-columns: 1fr; }

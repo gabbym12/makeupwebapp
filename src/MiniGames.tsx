@@ -28,12 +28,62 @@ const MEMORY_PAIRS: Pair[] = [
   { id: "mauve", name: "Quiet mauve", color: "#a77984", family: "Soft" },
   { id: "clay", name: "Soft clay", color: "#b86f5f", family: "Earthy" },
 ];
+const ONE_TAKE_EXTRA_PAIRS: Pair[] = [
+  { id: "petal", name: "Petal hush", color: "#c98287", family: "Rosy" },
+  { id: "spice", name: "Spiced peach", color: "#dfa081", family: "Warm" },
+  { id: "dusty-rose", name: "Dusty rose", color: "#bd7e87", family: "Rosy" },
+  { id: "soft-berry", name: "Soft berry", color: "#a97581", family: "Soft" },
+];
+const ONE_TAKE_ROUNDS = [
+  { pairs: 6, label: "The first look" },
+  { pairs: 8, label: "Closer shades" },
+  { pairs: 10, label: "The final edit" },
+] as const;
+const ONE_TAKE_LAYOUTS: Record<number, string[]> = {
+  2: [
+    "rose", "spice", "honey", "fig", "mauve", "petal", "clay", "apricot",
+    "fig", "honey", "petal", "rose", "apricot", "clay", "spice", "mauve",
+  ],
+  3: [
+    "mauve", "clay", "dusty-rose", "apricot", "fig", "spice", "petal", "mauve",
+    "honey", "dusty-rose", "soft-berry", "rose", "clay", "petal", "apricot",
+    "fig", "rose", "soft-berry", "spice", "honey",
+  ],
+};
 type MemoryCard = Pair & { key: string };
 function newDeck(): MemoryCard[] {
   return [
     ...MEMORY_PAIRS.map((pair) => ({ ...pair, key: `${pair.id}-a` })),
     ...[...MEMORY_PAIRS].reverse().map((pair) => ({ ...pair, key: `${pair.id}-b` })),
   ];
+}
+function oneTakeDeck(round: number): MemoryCard[] {
+  const roundConfig = ONE_TAKE_ROUNDS[round - 1];
+  if (!roundConfig) throw new Error(`Unknown One-Take Memory round: ${round}`);
+  const count = roundConfig.pairs;
+  const pairs = [...MEMORY_PAIRS, ...ONE_TAKE_EXTRA_PAIRS].slice(0, count);
+  const layout = ONE_TAKE_LAYOUTS[round];
+  if (!layout) {
+    return [
+      ...pairs.map((pair) => ({ ...pair, key: `${pair.id}-a` })),
+      ...[...pairs].reverse().map((pair) => ({ ...pair, key: `${pair.id}-b` })),
+    ];
+  }
+  if (layout.length !== count * 2) throw new Error(`Invalid card layout for One-Take Memory round ${round}`);
+
+  const pairsById = new Map(pairs.map((pair) => [pair.id, pair]));
+  const occurrences = new Map<string, number>();
+  const deck = layout.map((id) => {
+    const pair = pairsById.get(id);
+    if (!pair) throw new Error(`Unknown shade pair "${id}" in One-Take Memory round ${round}`);
+    const occurrence = occurrences.get(id) ?? 0;
+    occurrences.set(id, occurrence + 1);
+    return { ...pair, key: `${id}-${occurrence === 0 ? "a" : "b"}` };
+  });
+  if (pairs.some((pair) => occurrences.get(pair.id) !== 2)) {
+    throw new Error(`Every shade must appear exactly twice in One-Take Memory round ${round}`);
+  }
+  return deck;
 }
 
 export function MakeupMemoryMatch({ onHub }: { onHub: () => void }) {
@@ -78,64 +128,87 @@ export function MakeupMemoryMatch({ onHub }: { onHub: () => void }) {
 }
 
 export function NoMistakesMemory({ onHub }: { onHub: () => void }) {
-  const [deck, setDeck] = useState<MemoryCard[]>(newDeck);
+  const [round, setRound] = useState(1);
   const [flipped, setFlipped] = useState<string[]>([]);
   const [matched, setMatched] = useState<string[]>([]);
   const [turns, setTurns] = useState(0);
   const [locked, setLocked] = useState(false);
-  const [failed, setFailed] = useState(false);
-  const won = matched.length === MEMORY_PAIRS.length;
+  const [phase, setPhase] = useState<"playing" | "between" | "failed" | "won">("playing");
+  const pairCount = ONE_TAKE_ROUNDS[round - 1].pairs;
+  const deck = useMemo(() => oneTakeDeck(round), [round]);
 
   useEffect(() => {
-    if (flipped.length !== 2 || failed || won) return;
+    if (flipped.length !== 2 || phase !== "playing") return;
     const [first, second] = flipped.map((key) => deck.find((card) => card.key === key));
     if (first && second && first.id === second.id) {
+      const nextMatchedCount = matched.length + 1;
       setMatched((value) => [...value, first.id]);
       setFlipped([]);
+      if (nextMatchedCount === pairCount) setPhase(round === 3 ? "won" : "between");
       return;
     }
     setLocked(true);
-    const timer = window.setTimeout(() => setFailed(true), 950);
+    const timer = window.setTimeout(() => setPhase("failed"), 950);
     return () => window.clearTimeout(timer);
-  }, [flipped, deck, failed, won]);
+  }, [flipped, deck, matched.length, pairCount, phase, round]);
 
   function flip(card: MemoryCard) {
-    if (locked || failed || won || flipped.includes(card.key) || matched.includes(card.id)) return;
+    if (locked || phase !== "playing" || flipped.includes(card.key) || matched.includes(card.id)) return;
     const next = [...flipped, card.key];
     setFlipped(next);
     if (next.length === 2) setTurns((value) => value + 1);
   }
 
   function replay() {
-    setDeck(newDeck());
+    setRound(1);
     setFlipped([]);
     setMatched([]);
     setTurns(0);
     setLocked(false);
-    setFailed(false);
+    setPhase("playing");
   }
 
-  return <GameShell onHub={onHub} eyebrow="One-take memory · 6 shade pairs">
+  function continueRound() {
+    setRound((value) => value + 1);
+    setFlipped([]);
+    setMatched([]);
+    setLocked(false);
+    setPhase("playing");
+  }
+
+  const roundLabel = ONE_TAKE_ROUNDS[round - 1].label;
+  const isFailed = phase === "failed";
+  const isBetween = phase === "between";
+  const isWon = phase === "won";
+
+  return <GameShell onHub={onHub} eyebrow="One-take memory · three rounds">
     <div className="mini-game__heading">
-      <div><h1>One-take <em>memory.</em></h1><p>Turn over two cards at a time. Match all six pairs without a mistake—or restart with the same card positions.</p></div>
+      <div><h1>One-take <em>memory.</em></h1><p>Three rounds, each a little closer in color and in a new layout. Match every pair without a mistake—or the whole run starts again.</p></div>
       <div className="mini-game__stat"><strong>{String(turns).padStart(2, "0")}</strong><span>turns</span></div>
     </div>
-    <div className="mini-game__progressline">
-      <span>{matched.length} of 6 pairs found</span>
-      <div role="progressbar" aria-label="Pairs found" aria-valuemin={0} aria-valuemax={6} aria-valuenow={matched.length}><i style={{ transform: `scaleX(${matched.length / 6})` }} /></div>
-      <span>{failed ? "Run ended" : "One life"}</span>
+    <div className="mini-game__progressline no-mistakes-progress">
+      <span>Round {round} of 3 · {roundLabel}</span>
+      <div role="progressbar" aria-label={`Round ${round} pair progress`} aria-valuemin={0} aria-valuemax={pairCount} aria-valuenow={matched.length}><i style={{ transform: `scaleX(${matched.length / pairCount})` }} /></div>
+      <span>{matched.length} / {pairCount} pairs · {pairCount * 2} cards</span>
     </div>
-    <div className={`memory-grid no-mistakes-grid${failed ? " is-failed" : ""}`} role="group" aria-label="One-take memory cards">
-      {deck.map((card, index) => {
-        const revealed = flipped.includes(card.key) || matched.includes(card.id);
-        return <button key={card.key} type="button" className={`memory-card${revealed ? " is-revealed" : ""}${matched.includes(card.id) ? " is-matched" : ""}${failed && flipped.includes(card.key) ? " is-mistake" : ""}`} onClick={() => flip(card)} disabled={revealed || locked || failed || won} aria-label={revealed ? `${card.name}, ${matched.includes(card.id) ? "matched" : "face up"}` : `Card ${index + 1}, face down`} aria-pressed={revealed}>
-          {revealed ? <><i style={{ background: card.color }} /><span>{card.name}</span></> : <span className="memory-card__back" aria-hidden="true">the<br />counter</span>}
-        </button>;
-      })}
-    </div>
-    {failed ? <div className="mini-game__result-inline no-mistakes-result is-failed" role="status" aria-live="assertive"><div><h2>That’s the one.</h2><p>The shades didn’t match. This run is over—restart with the same card positions.</p></div><button className="arcade-button" type="button" onClick={replay}><RotateCcw size={15} aria-hidden="true" /> Restart this layout</button></div>
-      : won ? <div className="mini-game__result-inline no-mistakes-result" role="status" aria-live="polite"><div><h2>Six pairs. Not one mistake.</h2><p>You cleared the tray in {turns} {turns === 1 ? "turn" : "turns"}. A flawless eye.</p></div><button className="arcade-button" type="button" onClick={replay}><RotateCcw size={15} aria-hidden="true" /> Play again</button></div>
-        : <p className="mini-game__hint">One wrong pair ends the attempt. Take a careful look before you turn the next card.</p>}
+    {isBetween ? <section className="mini-game__round-break" role="status" aria-live="polite" aria-labelledby="one-take-break-title">
+      <p className="arcade__eyebrow">Round {round} complete · flawless</p>
+      <h2 id="one-take-break-title">{round === 1 ? "A perfect first look." : "Your eye is getting sharper."}</h2>
+      <p>You found all {pairCount} pairs without a mistake. Round {round + 1} brings {ONE_TAKE_ROUNDS[round].pairs * 2} cards, a new layout, and shades that sit even closer together.</p>
+      <button className="arcade-button" type="button" onClick={continueRound}>Continue to round {round + 1}<ArrowRight size={15} aria-hidden="true" /></button>
+    </section> : <>
+      <div className={`memory-grid no-mistakes-grid no-mistakes-grid--round-${round}${isFailed ? " is-failed" : ""}`} role="group" aria-label={`One-take memory round ${round}, ${pairCount * 2} cards`}>
+        {deck.map((card, index) => {
+          const revealed = flipped.includes(card.key) || matched.includes(card.id);
+          return <button key={card.key} type="button" className={`memory-card${revealed ? " is-revealed" : ""}${matched.includes(card.id) ? " is-matched" : ""}${isFailed && flipped.includes(card.key) ? " is-mistake" : ""}`} onClick={() => flip(card)} disabled={revealed || locked || phase !== "playing"} aria-label={revealed ? `${card.name}, ${matched.includes(card.id) ? "matched" : "face up"}` : `Card ${index + 1}, face down`} aria-pressed={revealed}>
+            {revealed ? <><i style={{ background: card.color }} /><span>{card.name}</span></> : <span className="memory-card__back" aria-hidden="true">the<br />counter</span>}
+          </button>;
+        })}
+      </div>
+      {isFailed ? <div className="mini-game__result-inline no-mistakes-result is-failed" role="status" aria-live="assertive"><div><h2>That’s the one.</h2><p>The shades didn’t match, so the full three-round run is over. Start again from Round 1; each round keeps its own layout.</p></div><button className="arcade-button" type="button" onClick={replay}><RotateCcw size={15} aria-hidden="true" /> Restart from round 1</button></div>
+        : isWon ? <div className="mini-game__result-inline no-mistakes-result" role="status" aria-live="polite"><div><h2>Three rounds. Not one mistake.</h2><p>You cleared all 24 pairs across {turns} {turns === 1 ? "turn" : "turns"}. A flawless eye.</p></div><button className="arcade-button" type="button" onClick={replay}><RotateCcw size={15} aria-hidden="true" /> Play again</button></div>
+          : <p className="mini-game__hint">Cards move to a new layout between rounds, not after each match. Every shade still has its matching pair.</p>}
+    </>}
   </GameShell>;
 }
 

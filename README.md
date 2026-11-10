@@ -2,9 +2,11 @@
 
 A makeup storefront connected to Shopify, with a separate game arcade at
 `/game`. The arcade includes Shade Match, Makeup Memory Match, Beauty Trivia,
-Build a Makeup Look, and One-Take Memory. One-Take Memory ends the run if a
-player misses a pair. The store shows published Shopify products rather than
-invented demo inventory; the games use illustrative content.
+Build a Makeup Look, and One-Take Memory. One-Take Memory grows from 6 to 10
+pairs across three rounds; a wrong pair restarts the full run, with card
+positions fixed within each round and new layouts in later rounds. The store
+shows published Shopify products rather than invented demo inventory; the
+games use illustrative content.
 
 ## Run locally
 
