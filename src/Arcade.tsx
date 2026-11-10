@@ -10,7 +10,7 @@ const activities = [
   { id: "memory" as const, number: "02", title: "Makeup Memory Match", kicker: "Turn over a little color", text: "Six pairs are waiting. Remember where each shade is hiding.", icon: Layers3, swatches: ["#b9787d", "#e3a083", "#765765"] },
   { id: "trivia" as const, number: "03", title: "Beauty Trivia", kicker: "A few lovely facts", text: "Five quick questions about the colors and rituals we love.", icon: CircleHelp, swatches: ["#d7a94f", "#a77984", "#c66c59"] },
   { id: "look" as const, number: "04", title: "Build a Makeup Look", kicker: "Make the mood yours", text: "Choose eye, cheek, and lip shades to bring a beauty brief to life.", icon: Brush, swatches: ["#8b675b", "#cf8c86", "#944e60"] },
-  { id: "one-take" as const, number: "05", title: "One-Take Memory", kicker: "One mistake means restart", text: "Find all six shade pairs. One wrong match ends the run—then shuffle and start fresh.", icon: ShieldCheck, swatches: ["#c87d83", "#d7a94f", "#765765"] },
+  { id: "one-take" as const, number: "05", title: "One-Take Memory", kicker: "One mistake means restart", text: "Find all six shade pairs. One wrong match ends the run—restart with the same card positions.", icon: ShieldCheck, swatches: ["#c87d83", "#d7a94f", "#765765"] },
 ];
 
 export default function Arcade() {

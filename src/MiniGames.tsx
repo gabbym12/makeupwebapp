@@ -29,16 +29,11 @@ const MEMORY_PAIRS: Pair[] = [
   { id: "clay", name: "Soft clay", color: "#b86f5f", family: "Earthy" },
 ];
 type MemoryCard = Pair & { key: string };
-function shuffled<T,>(items: T[]): T[] {
-  const result = [...items];
-  for (let i = result.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [result[i], result[j]] = [result[j], result[i]];
-  }
-  return result;
-}
 function newDeck(): MemoryCard[] {
-  return shuffled(MEMORY_PAIRS.flatMap((pair) => [{ ...pair, key: `${pair.id}-a` }, { ...pair, key: `${pair.id}-b` }]));
+  return [
+    ...MEMORY_PAIRS.map((pair) => ({ ...pair, key: `${pair.id}-a` })),
+    ...[...MEMORY_PAIRS].reverse().map((pair) => ({ ...pair, key: `${pair.id}-b` })),
+  ];
 }
 
 export function MakeupMemoryMatch({ onHub }: { onHub: () => void }) {
@@ -78,7 +73,7 @@ export function MakeupMemoryMatch({ onHub }: { onHub: () => void }) {
         </button>;
       })}
     </div>
-    {done ? <div className="mini-game__result-inline" role="status"><div><h2>Every shade, found.</h2><p>You matched all six pairs in {turns} {turns === 1 ? "turn" : "turns"}. Lovely memory.</p></div><button className="arcade-button" type="button" onClick={replay}><RotateCcw size={15} /> Play again</button></div> : <p className="mini-game__hint">Take your time. Your cards stay put, but the order changes each time you play.</p>}
+    {done ? <div className="mini-game__result-inline" role="status"><div><h2>Every shade, found.</h2><p>You matched all six pairs in {turns} {turns === 1 ? "turn" : "turns"}. Lovely memory.</p></div><button className="arcade-button" type="button" onClick={replay}><RotateCcw size={15} /> Play again</button></div> : <p className="mini-game__hint">The card positions stay the same each time. Take your time and find all six pairs.</p>}
   </GameShell>;
 }
 
@@ -122,7 +117,7 @@ export function NoMistakesMemory({ onHub }: { onHub: () => void }) {
 
   return <GameShell onHub={onHub} eyebrow="One-take memory · 6 shade pairs">
     <div className="mini-game__heading">
-      <div><h1>One-take <em>memory.</em></h1><p>Turn over two cards at a time. Match all six pairs without a mistake—or restart with a freshly shuffled deck.</p></div>
+      <div><h1>One-take <em>memory.</em></h1><p>Turn over two cards at a time. Match all six pairs without a mistake—or restart with the same card positions.</p></div>
       <div className="mini-game__stat"><strong>{String(turns).padStart(2, "0")}</strong><span>turns</span></div>
     </div>
     <div className="mini-game__progressline">
@@ -138,8 +133,8 @@ export function NoMistakesMemory({ onHub }: { onHub: () => void }) {
         </button>;
       })}
     </div>
-    {failed ? <div className="mini-game__result-inline no-mistakes-result is-failed" role="status" aria-live="assertive"><div><h2>That’s the one.</h2><p>The shades didn’t match. This run is over—shuffle a fresh deck and try again.</p></div><button className="arcade-button" type="button" onClick={replay}><RotateCcw size={15} aria-hidden="true" /> Restart with a new deck</button></div>
-      : won ? <div className="mini-game__result-inline no-mistakes-result" role="status" aria-live="polite"><div><h2>Six pairs. Not one mistake.</h2><p>You cleared the tray in {turns} {turns === 1 ? "turn" : "turns"}. A flawless eye.</p></div><button className="arcade-button" type="button" onClick={replay}><RotateCcw size={15} aria-hidden="true" /> Play a fresh deck</button></div>
+    {failed ? <div className="mini-game__result-inline no-mistakes-result is-failed" role="status" aria-live="assertive"><div><h2>That’s the one.</h2><p>The shades didn’t match. This run is over—restart with the same card positions.</p></div><button className="arcade-button" type="button" onClick={replay}><RotateCcw size={15} aria-hidden="true" /> Restart this layout</button></div>
+      : won ? <div className="mini-game__result-inline no-mistakes-result" role="status" aria-live="polite"><div><h2>Six pairs. Not one mistake.</h2><p>You cleared the tray in {turns} {turns === 1 ? "turn" : "turns"}. A flawless eye.</p></div><button className="arcade-button" type="button" onClick={replay}><RotateCcw size={15} aria-hidden="true" /> Play again</button></div>
         : <p className="mini-game__hint">One wrong pair ends the attempt. Take a careful look before you turn the next card.</p>}
   </GameShell>;
 }
