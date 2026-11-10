@@ -418,6 +418,48 @@ a { color: inherit; }
   letter-spacing: .12em;
   text-transform: uppercase;
 }
+.shade-game__level-track {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0 0 18px;
+  border-top: 1px solid #e1d0c0;
+  border-bottom: 1px solid #e1d0c0;
+}
+.shade-game__level-step {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px 14px;
+  color: #97877d;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.shade-game__level-step + .shade-game__level-step { border-left: 1px solid #e1d0c0; }
+.shade-game__level-number {
+  display: grid;
+  place-items: center;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  border: 1px solid #d8c7b8;
+  border-radius: 50%;
+  font-size: 8px;
+}
+.shade-game__level-step.is-current { color: var(--game-plum); background: #f4e8dc; }
+.shade-game__level-step.is-current .shade-game__level-number {
+  border-color: var(--game-plum);
+  color: #fff9f1;
+  background: var(--game-plum);
+}
+.shade-game__level-step.is-done { color: #58734e; }
+.shade-game__level-step.is-done .shade-game__level-number {
+  border-color: #aebca2;
+  background: #e8eddf;
+}
 .shade-game__board {
   position: relative;
   display: grid;
@@ -665,6 +707,41 @@ a { color: inherit; }
   line-height: 1.8;
 }
 .shade-game__result .shade-game__replay { min-width: 185px; }
+.shade-game__level-result .shade-game__title { margin: 0 auto; font-size: clamp(40px, 6.5vw, 68px); }
+.shade-game__level-continue { min-width: 205px; margin-top: 28px; }
+.shade-game__level-scores {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 24px 0 0;
+  border-top: 1px solid #e1d0c0;
+  border-bottom: 1px solid #e1d0c0;
+}
+.shade-game__level-score {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 15px 8px;
+  color: var(--game-muted);
+  font-size: 9px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.shade-game__level-score + .shade-game__level-score { border-left: 1px solid #e1d0c0; }
+.shade-game__level-score strong {
+  color: var(--game-plum);
+  font-family: var(--display, "Playfair Display", Georgia, serif);
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -.03em;
+  text-transform: none;
+}
+.shade-game__level-score small {
+  color: #927f73;
+  font-family: "DM Sans", sans-serif;
+  font-size: 10px;
+  letter-spacing: 0;
+}
+.shade-game__all-review { flex-wrap: wrap; max-width: 340px; margin-inline: auto; }
 .shade-game__round-review {
   display: flex;
   justify-content: center;
@@ -699,6 +776,8 @@ a { color: inherit; }
   .shade-game__round-chip { width: 59px; height: 59px; }
   .shade-game__round-chip span:first-child { font-size: 18px; }
   .shade-game__round-chip span:last-child { margin-top: -10px; font-size: 7px; }
+  .shade-game__level-step { gap: 6px; padding: 10px 7px; font-size: 8px; letter-spacing: .06em; }
+  .shade-game__level-number { flex-basis: 20px; width: 20px; height: 20px; font-size: 7px; }
   .shade-game__dek { font-size: 12px; }
   .shade-game__board { grid-template-columns: 1fr; }
   .shade-game__target-panel { min-height: 220px; padding: 22px; }
@@ -712,6 +791,7 @@ a { color: inherit; }
   .shade-game__option-name { font-size: 8px; }
   .shade-game__feedback { align-items: flex-start; padding: 13px; }
   .shade-game__continue { min-height: 42px; padding-inline: 12px; font-size: 9px; }
+  .shade-game__level-scores { margin-top: 19px; }
 }
 @media (max-width: 380px) {
   .shade-game__main { width: min(100% - 24px, 500px); }
