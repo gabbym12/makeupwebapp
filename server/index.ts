@@ -2,6 +2,7 @@ import { createServer as createHttpServer } from "node:http";
 import express from "express";
 import { resolve } from "node:path";
 import { createServer as createViteServer } from "vite";
+import { authRouter, requireSiteAuth } from "./auth.js";
 import {
   addCartLine,
   createCart,
@@ -17,6 +18,7 @@ const PRODUCTS_PER_PAGE = 24;
 const PRODUCT_CACHE_TTL_MS = 45_000;
 const MAX_CACHED_PAGES = 20;
 const app = express();
+app.set("trust proxy", 1);
 const httpServer = createHttpServer(app);
 
 type ShopifyProductsResponse = {
@@ -103,6 +105,8 @@ const PRODUCTS_QUERY = `#graphql
 `;
 
 app.use(express.json({ limit: "16kb" }));
+app.use("/api/auth", authRouter);
+app.use("/api", requireSiteAuth);
 
 app.get("/api/products", async (request, response) => {
   const cursorValue = request.query.cursor;
