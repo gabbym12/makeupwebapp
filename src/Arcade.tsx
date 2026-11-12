@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight, Brush, CircleHelp, Eye, Sparkles, Layers3, ShieldCheck } from "lucide-react";
 import MakeupGame from "./MakeupGame";
 import { BeautyTrivia, MakeupMemoryMatch, BuildMakeupLook, NoMistakesMemory } from "./MiniGames";
+import AuthControl from "./AuthControl";
 
 type Activity = "shade" | "memory" | "trivia" | "look" | "one-take";
 
@@ -37,7 +38,10 @@ export default function Arcade() {
         <a className="arcade__brand" href="/" aria-label="The Makeup Counter, shop home">
           <span>the makeup counter</span><small>Curiosity looks good on you</small>
         </a>
-        <a className="arcade__shop" href="/"><ArrowLeft size={15} aria-hidden="true" /> Back to the shop</a>
+        <div className="arcade__header-actions">
+          <AuthControl className="arcade-account-control" />
+          <a className="arcade__shop" href="/"><ArrowLeft size={15} aria-hidden="true" /> Back to the shop</a>
+        </div>
       </header>
       <main className="arcade__hub">
         <section className="arcade__hero">

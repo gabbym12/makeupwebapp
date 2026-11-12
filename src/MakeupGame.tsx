@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight, Palette, RotateCcw } from "lucide-react";
+import AuthControl from "./AuthControl";
 
 type Shade = {
   id: string;
@@ -296,6 +297,7 @@ export default function MakeupGame({ onHub }: MakeupGameProps) {
           <span className="shade-game__brand-note">A place to play with color</span>
         </a>
         <div className="shade-game__header-actions">
+          <AuthControl className="shade-account-control" />
           <button className="shade-game__back" type="button" onClick={onHub}>
             <ArrowLeft size={15} aria-hidden="true" />
             <span>All games</span>

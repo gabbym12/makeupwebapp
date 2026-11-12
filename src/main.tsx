@@ -1,14 +1,10 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App";
-import Arcade from "./Arcade";
+import AuthApp from "./AuthApp";
 import "./index.css";
-
-const currentPath = window.location.pathname.replace(/\/+$/, "");
-const Page = currentPath === "/game" ? Arcade : App;
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <Page />
+    <AuthApp />
   </React.StrictMode>,
 );

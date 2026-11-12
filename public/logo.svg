@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 72" role="img" aria-label="The Makeup Counter">
+  <rect width="320" height="72" rx="2" fill="#fbf7ef"/>
+  <circle cx="37" cy="36" r="25" fill="#684554"/>
+  <path d="M37 17c7 8 8 13 0 20-8-7-7-12 0-20Zm19 19c-8 7-13 8-20 0 7-8 12-7 20 0ZM37 55c-7-8-8-13 0-20 8 7 7 12 0 20ZM18 36c8-7 13-8 20 0-7 8-12 7-20 0Z" fill="#f0d995"/>
+  <circle cx="37" cy="36" r="4" fill="#d65459"/>
+  <text x="77" y="34" fill="#352c2a" font-family="Georgia,serif" font-size="21" letter-spacing="-1">the makeup counter</text>
+  <text x="78" y="52" fill="#684554" font-family="Arial,sans-serif" font-size="8" letter-spacing="2">A PLACE TO PLAY WITH COLOR</text>
+</svg>

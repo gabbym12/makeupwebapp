@@ -1,5 +1,8 @@
 import { createServer as createHttpServer } from "node:http";
+import cors from "cors";
 import express from "express";
+import { clerkMiddleware } from "@clerk/express";
+import { publishableKeyFromHost } from "@clerk/shared/keys";
 import { resolve } from "node:path";
 import { createServer as createViteServer } from "vite";
 import {
@@ -12,6 +15,11 @@ import {
   updateCartLine,
 } from "./shopifyCart.js";
 import { shopifyStorefrontRequest } from "./shopifyStorefrontClient.js";
+import {
+  CLERK_PROXY_PATH,
+  clerkProxyMiddleware,
+  getClerkProxyHost,
+} from "./middlewares/clerkProxyMiddleware.js";
 
 const PRODUCTS_PER_PAGE = 24;
 const PRODUCT_CACHE_TTL_MS = 45_000;
@@ -102,7 +110,18 @@ const PRODUCTS_QUERY = `#graphql
   }
 `;
 
+app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
+app.use(cors({ credentials: true, origin: true }));
 app.use(express.json({ limit: "16kb" }));
+app.use(express.urlencoded({ extended: true }));
+app.use(
+  clerkMiddleware((request) => ({
+    publishableKey: publishableKeyFromHost(
+      getClerkProxyHost(request) ?? "",
+      process.env.CLERK_PUBLISHABLE_KEY,
+    ),
+  })),
+);
 
 app.get("/api/products", async (request, response) => {
   const cursorValue = request.query.cursor;

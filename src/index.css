@@ -1055,3 +1055,48 @@ a { color: inherit; }
     scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important;
   }
 }
+
+/* Account access stays quiet and compact alongside the existing brand controls. */
+.account-control { display: inline-flex; align-items: center; gap: 12px; min-height: 34px; color: var(--plum); font-size: 10px; letter-spacing: .04em; white-space: nowrap; }
+.account-control--loading { width: 53px; height: 24px; background: #efe5d8; animation: account-pulse 1.2s ease-in-out infinite alternate; }
+.account-control a { color: inherit; text-decoration: none; }
+.account-control--link, .account-control__identity { position: relative; font-weight: 700; }
+.account-control--link::after, .account-control__identity > span::after { content: ""; position: absolute; right: 0; bottom: -4px; left: 0; height: 1px; background: var(--rose); transform: scaleX(0); transform-origin: right; transition: transform .2s ease; }
+.account-control--link:hover::after, .account-control--link:focus-visible::after, .account-control__identity:hover > span::after { transform: scaleX(1); transform-origin: left; }
+.account-control__identity { display: flex; flex-direction: column; gap: 3px; }
+.account-control__identity small { max-width: 118px; overflow: hidden; color: var(--muted); font-size: 8px; font-weight: 500; text-overflow: ellipsis; }
+.account-control__sign-out { padding: 0; border: 0; color: #73645e; background: transparent; cursor: pointer; font-size: 9px; text-decoration: underline; text-underline-offset: 3px; }
+.account-control__sign-out:hover { color: var(--rose-deep); }
+.account-control :focus-visible { outline: 2px solid var(--rose); outline-offset: 4px; }
+.site-account-control { margin-left: 8px; }
+@keyframes account-pulse { to { opacity: .45; } }
+
+.auth-page { min-height: 100dvh; display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1fr); align-items: center; gap: clamp(35px, 8vw, 120px); padding: clamp(28px, 7vw, 92px); background: radial-gradient(circle at 16% 18%, #f0d995 0, transparent 23rem), #f6f0e7; }
+.auth-page__intro { max-width: 440px; justify-self: end; }
+.auth-page__intro .wordmark-main { font-size: clamp(29px, 4vw, 48px); }
+.auth-page__intro .wordmark-sub { font-size: 9px; }
+.auth-page__intro p { max-width: 350px; margin: 28px 0 0; color: #675b55; font-family: var(--display); font-size: clamp(26px, 3.2vw, 40px); line-height: 1.15; letter-spacing: -.035em; }
+.auth-page__form { width: min(100%, 440px); min-width: 0; justify-self: center; }
+.auth-page__form > * { width: 100%; min-width: 0; }
+.auth-route-loading { min-height: 100dvh; background: var(--paper); }
+
+@media (max-width: 760px) {
+  .site-account-control { margin: 0 7px 0 auto; gap: 8px; }
+  .site-account-control .account-control__identity small { display: none; }
+  .site-account-control .account-control__sign-out { font-size: 8px; }
+  .header-cart { margin-left: 0; }
+  .auth-page { width: 100%; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 28px; padding: 35px 18px; }
+  .auth-page__intro { min-width: 0; justify-self: center; width: min(100%, 440px); text-align: center; }
+  .auth-page__form { width: min(100%, 440px); }
+  .auth-page__intro .wordmark { align-items: center; }
+  .auth-page__intro p { margin: 16px auto 0; font-size: 25px; }
+}
+@media (max-width: 540px) {
+  .arcade__header-actions { gap: 6px; }
+  .arcade-account-control { gap: 7px; font-size: 9px; }
+  .arcade-account-control .account-control__identity small { display: none; }
+  .arcade-account-control .account-control__sign-out { font-size: 8px; }
+  .shade-account-control { gap: 7px; font-size: 9px; }
+  .shade-account-control .account-control__identity small { display: none; }
+  .shade-account-control .account-control__sign-out { font-size: 8px; }
+}

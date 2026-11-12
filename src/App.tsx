@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ArrowRight, ArrowUp, Flower2, Menu, ShoppingBag, X } from "lucide-react";
 import heroImage from "../attached_assets/generated_images/beauty-still-life.png";
 import CartDrawer, { type Cart, type CartLine } from "./CartDrawer";
+import AuthControl from "./AuthControl";
 
 type ProductVariant = {
   id: string;
@@ -314,6 +315,7 @@ export default function App() {
           <a href="#footer" onClick={closeMenu}>A note from us</a>
         </nav>
         <span className="header-note">Everyday beauty, thoughtfully found</span>
+        <AuthControl className="site-account-control" />
         <button
           className="header-cart"
           type="button"

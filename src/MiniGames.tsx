@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ArrowLeft, ArrowRight, RotateCcw, Sparkles, Heart, Check } from "lucide-react";
+import AuthControl from "./AuthControl";
 
 type GameShellProps = { onHub: () => void; children: ReactNode; eyebrow: string };
 
@@ -9,7 +10,7 @@ function GameShell({ onHub, children, eyebrow }: GameShellProps) {
       <div className="arcade__ribbon">THE MAKEUP COUNTER · A LITTLE COLOR, A LITTLE PLAY</div>
       <header className="arcade__header">
         <a className="arcade__brand" href="/" aria-label="The Makeup Counter, shop home"><span>the makeup counter</span><small>Curiosity looks good on you</small></a>
-        <div className="arcade__header-actions"><button className="arcade__shop" type="button" onClick={onHub}><ArrowLeft size={15} aria-hidden="true" /> All games</button><a className="arcade__shop arcade__shop--link" href="/">Visit the shop</a></div>
+        <div className="arcade__header-actions"><AuthControl className="arcade-account-control" /><button className="arcade__shop" type="button" onClick={onHub}><ArrowLeft size={15} aria-hidden="true" /> All games</button><a className="arcade__shop arcade__shop--link" href="/">Visit the shop</a></div>
       </header>
       <main className="mini-game__main">
         <p className="arcade__eyebrow">{eyebrow}</p>
