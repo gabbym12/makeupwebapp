@@ -1069,6 +1069,10 @@ a { color: inherit; }
 .account-control__sign-out:hover { color: var(--rose-deep); }
 .account-control :focus-visible { outline: 2px solid var(--rose); outline-offset: 4px; }
 .site-account-control { margin-left: 8px; }
+.site-account-control.account-control--link { justify-content: center; min-height: 34px; padding: 0 14px; border: 1px solid #d65459; color: #fffaf4; background: #d65459; text-decoration: none; transition: background .18s ease, border-color .18s ease; }
+.site-account-control.account-control--link::after { display: none; }
+.site-account-control.account-control--link:hover { border-color: #b8474e; background: #b8474e; }
+.site-account-control.account-control--link:focus-visible { outline: 2px solid #963b43; outline-offset: 3px; }
 @keyframes account-pulse { to { opacity: .45; } }
 
 .auth-page { min-height: 100dvh; display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1fr); align-items: center; gap: clamp(35px, 8vw, 120px); padding: clamp(28px, 7vw, 92px); background: radial-gradient(circle at 16% 18%, #f0d995 0, transparent 23rem), #f6f0e7; }
@@ -1078,10 +1082,25 @@ a { color: inherit; }
 .auth-page__intro p { max-width: 350px; margin: 28px 0 0; color: #675b55; font-family: var(--display); font-size: clamp(26px, 3.2vw, 40px); line-height: 1.15; letter-spacing: -.035em; }
 .auth-page__form { width: min(100%, 440px); min-width: 0; justify-self: center; }
 .auth-page__form > * { width: 100%; min-width: 0; }
+.login-gate { min-height: 100dvh; display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1fr); align-items: center; gap: clamp(35px, 8vw, 120px); padding: clamp(28px, 7vw, 92px); background: radial-gradient(circle at 16% 18%, #f0d995 0, transparent 23rem), #f6f0e7; }
+.login-gate__intro { max-width: 440px; justify-self: end; }
+.login-gate__intro .wordmark-main { font-size: clamp(29px, 4vw, 48px); }
+.login-gate__intro .wordmark-sub { font-size: 9px; }
+.login-gate__intro > p { max-width: 350px; margin: 28px 0 0; color: #675b55; font-family: var(--display); font-size: clamp(26px, 3.2vw, 40px); line-height: 1.15; letter-spacing: -.035em; }
+.login-gate__card { width: min(100%, 440px); justify-self: center; padding: clamp(25px, 5vw, 46px); border: 1px solid var(--line); background: var(--paper); box-shadow: 0 24px 70px rgb(68 48 43 / 12%); }
+.login-gate__card .eyebrow { margin-bottom: 14px; }
+.login-gate__card h1 { margin: 0; color: var(--ink); font-family: var(--display); font-size: clamp(34px, 4vw, 46px); line-height: 1.05; letter-spacing: -.045em; font-weight: 500; }
+.login-gate__description { margin: 16px 0 28px; color: #675b55; font-size: 13px; line-height: 1.7; }
+.login-gate__primary { display: inline-flex; min-height: 46px; width: 100%; align-items: center; justify-content: center; border: 1px solid var(--rose); color: #fffaf4; background: var(--rose); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-decoration: none; transition: background .18s ease, border-color .18s ease, transform .18s ease; }
+.login-gate__primary:hover { border-color: var(--rose-deep); background: var(--rose-deep); transform: translateY(-1px); }
+.login-gate__primary:focus-visible, .login-gate__signup a:focus-visible { outline: 2px solid var(--rose-deep); outline-offset: 3px; }
+.login-gate__signup { margin: 22px 0 0; color: var(--muted); font-size: 11px; text-align: center; }
+.login-gate__signup a { color: var(--rose-deep); font-weight: 700; text-underline-offset: 3px; }
 .auth-route-loading { min-height: 100dvh; background: var(--paper); }
 
 @media (max-width: 760px) {
   .site-account-control { margin: 0 7px 0 auto; gap: 8px; }
+  .site-account-control.account-control--link { min-height: 30px; padding: 0 10px; font-size: 9px; }
   .site-account-control .account-control__identity small { display: none; }
   .site-account-control .account-control__sign-out { font-size: 8px; }
   .header-cart { margin-left: 0; }
@@ -1090,6 +1109,11 @@ a { color: inherit; }
   .auth-page__form { width: min(100%, 440px); }
   .auth-page__intro .wordmark { align-items: center; }
   .auth-page__intro p { margin: 16px auto 0; font-size: 25px; }
+  .login-gate { width: 100%; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 28px; padding: 35px 18px; }
+  .login-gate__intro { min-width: 0; justify-self: center; width: min(100%, 440px); text-align: center; }
+  .login-gate__intro .wordmark { align-items: center; }
+  .login-gate__intro > p { margin: 16px auto 0; font-size: 25px; }
+  .login-gate__card { width: min(100%, 440px); }
 }
 @media (max-width: 540px) {
   .arcade__header-actions { gap: 6px; }

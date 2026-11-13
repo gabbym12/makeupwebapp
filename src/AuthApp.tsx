@@ -4,6 +4,7 @@ import { shadcn } from "@clerk/themes";
 import { Redirect, Route, Switch, Router as WouterRouter, useLocation } from "wouter";
 import App from "./App";
 import Arcade from "./Arcade";
+import LoginGate from "./LoginGate";
 
 const clerkPubKey = publishableKeyFromHost(
   window.location.hostname,
@@ -72,8 +73,9 @@ const clerkAppearance = {
 
 function HomeRoute() {
   const { isLoaded, isSignedIn } = useUser();
+  if (!isLoaded) return <div className="auth-route-loading" aria-label="Loading" />;
   if (isLoaded && isSignedIn) return <Redirect to="/account" />;
-  return <App />;
+  return <LoginGate />;
 }
 
 function AccountRoute() {
@@ -81,6 +83,19 @@ function AccountRoute() {
   if (!isLoaded) return <div className="auth-route-loading" aria-label="Loading account" />;
   if (!isSignedIn) return <Redirect to="/" />;
   return <App />;
+}
+
+function GameRoute() {
+  const { isLoaded, isSignedIn } = useUser();
+  if (!isLoaded) return <div className="auth-route-loading" aria-label="Loading games" />;
+  if (!isSignedIn) return <Redirect to="/" />;
+  return <Arcade />;
+}
+
+function LoginRoute() {
+  const { isLoaded, isSignedIn } = useUser();
+  if (!isLoaded) return <div className="auth-route-loading" aria-label="Loading sign in" />;
+  return <Redirect to={isSignedIn ? "/account" : "/sign-in"} />;
 }
 
 function SignInPage() {
@@ -130,7 +145,8 @@ function ClerkRoutes() {
       <Switch>
         <Route path="/" component={HomeRoute} />
         <Route path="/account" component={AccountRoute} />
-        <Route path="/game" component={Arcade} />
+        <Route path="/game" component={GameRoute} />
+        <Route path="/login/*?" component={LoginRoute} />
         <Route path="/sign-in/*?" component={SignInPage} />
         <Route path="/sign-up/*?" component={SignUpPage} />
         <Route><Redirect to="/" /></Route>

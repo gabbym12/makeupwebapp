@@ -11,7 +11,7 @@ export default function AuthControl({ className = "" }: AuthControlProps) {
   if (!isLoaded) return <span className={`account-control account-control--loading ${className}`} aria-hidden="true" />;
 
   if (!user) {
-    return <a className={`account-control account-control--link ${className}`} href={appPath("/sign-in")}>Sign in</a>;
+    return <a className={`account-control account-control--link ${className}`} href={appPath("/login")}>Log in</a>;
   }
 
   const name = [user.firstName, user.lastName].filter(Boolean).join(" ");
